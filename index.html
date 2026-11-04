@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
@@ -14,7 +13,6 @@
 <body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden font-sans select-none">
 
   <!-- Header Control Bar -->
-
   <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between z-20 shadow-lg">
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
@@ -24,44 +22,43 @@
         </select>
       </div>
 
-  <button id="btn-create-project" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1">
-    <i class="fa-solid fa-plus"></i> Proyek Baru
-  </button>
+      <button id="btn-create-project" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1">
+        <i class="fa-solid fa-plus"></i> Proyek Baru
+      </button>
 
-  <button id="btn-edit-project" class="text-slate-400 hover:text-amber-400 text-xs transition hidden">
-    <i class="fa-solid fa-pen"></i> Rename
-  </button>
+      <button id="btn-edit-project" class="text-slate-400 hover:text-amber-400 text-xs transition hidden">
+        <i class="fa-solid fa-pen"></i> Rename
+      </button>
 
-  <button id="btn-delete-project" class="text-slate-500 hover:text-red-400 text-xs transition hidden">
-    <i class="fa-solid fa-trash"></i> Hapus Proyek
-  </button>
-</div>
-
-<!-- Progress & Action Buttons -->
-<div class="flex items-center gap-6">
-  <div class="flex items-center gap-3 bg-slate-950 px-4 py-1.5 rounded-lg border border-slate-800">
-    <div class="text-xs text-slate-400">Progress:</div>
-    <div class="w-32 bg-slate-800 h-2 rounded-full overflow-hidden">
-      <div id="progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+      <button id="btn-delete-project" class="text-slate-500 hover:text-red-400 text-xs transition hidden">
+        <i class="fa-solid fa-trash"></i> Hapus Proyek
+      </button>
     </div>
-    <div class="text-xs font-mono font-bold text-emerald-400">
-      <span id="stat-acquired">0</span>/<span id="stat-total">0</span> (<span id="stat-progress">0%</span>)
-    </div>
-  </div>
 
-  <div class="flex gap-2">
-    <button id="btn-add-node" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
-      <i class="fa-solid fa-plus"></i> Tambah Node
-    </button>
-    <button id="btn-save-db" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
-      <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Sheets
-    </button>
-  </div>
-</div>
+    <!-- Progress & Action Buttons -->
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-3 bg-slate-950 px-4 py-1.5 rounded-lg border border-slate-800">
+        <div class="text-xs text-slate-400">Progress:</div>
+        <div class="w-32 bg-slate-800 h-2 rounded-full overflow-hidden">
+          <div id="progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+        </div>
+        <div class="text-xs font-mono font-bold text-emerald-400">
+          <span id="stat-acquired">0</span>/<span id="stat-total">0</span> (<span id="stat-progress">0%</span>)
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="btn-add-node" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-plus"></i> Tambah Node
+        </button>
+        <button id="btn-save-db" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Sheets
+        </button>
+      </div>
+    </div>
   </header>
 
   <!-- Interactive Map Viewport -->
-
   <main id="map-viewport" class="flex-1 relative overflow-hidden bg-slate-950 cursor-grab active:cursor-grabbing">
     <!-- Loading Overlay -->
     <div id="loading-spinner" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center gap-3 hidden">
@@ -69,24 +66,23 @@
       <p id="loading-text" class="text-xs text-amber-400 font-bold">Memuat data dari Google Sheets...</p>
     </div>
 
-<!-- Empty State Message -->
-<div id="empty-state" class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-6">
-  <i class="fa-solid fa-diagram-project text-5xl text-slate-700 mb-3"></i>
-  <h3 class="text-lg font-bold text-slate-300">Belum Ada Proyek Dipilih</h3>
-  <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Pilih proyek di pojok kiri atas atau buat proyek baru untuk mulai membuat roadmap.</p>
-  <button id="btn-empty-create" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-lg font-bold text-xs">
-    + Buat Proyek Baru
-  </button>
-</div>
+    <!-- Empty State Message -->
+    <div id="empty-state" class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-6">
+      <i class="fa-solid fa-diagram-project text-5xl text-slate-700 mb-3"></i>
+      <h3 class="text-lg font-bold text-slate-300">Belum Ada Proyek Dipilih</h3>
+      <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Pilih proyek di pojok kiri atas atau buat proyek baru untuk mulai membuat roadmap.</p>
+      <button id="btn-empty-create" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-lg font-bold text-xs">
+        + Buat Proyek Baru
+      </button>
+    </div>
 
-<!-- Map Canvas Transformation Wrapper -->
-<div id="map-canvas" class="absolute bg-grid-pattern min-w-[3000px] min-h-[2000px] top-0 left-0 hidden">
-  <svg id="connections-layer" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
-</div>
+    <!-- Map Canvas Transformation Wrapper -->
+    <div id="map-canvas" class="absolute bg-grid-pattern min-w-[3000px] min-h-[2000px] top-0 left-0 hidden">
+      <svg id="connections-layer" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
+    </div>
   </main>
 
   <!-- Context Menu (Klik Kanan Node) -->
-
   <div id="node-context-menu" class="fixed hidden bg-slate-900 border border-slate-700 shadow-2xl rounded-lg py-1.5 z-50 w-36 text-xs select-none">
     <button id="ctx-copy" class="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-amber-400 flex items-center gap-2">
       <i class="fa-solid fa-copy"></i> Copy Node
@@ -97,7 +93,6 @@
   </div>
 
   <!-- Modal 1: Edit / Tambah Node -->
-
   <div id="node-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-xl p-6 shadow-2xl">
       <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
@@ -107,67 +102,66 @@
         </button>
       </div>
 
-  <form id="node-form" class="space-y-4">
-    <div>
-      <label class="block text-xs font-medium text-slate-400 mb-1">Judul Penemuan / Item</label>
-      <input type="text" id="node-title" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="contoh: Instalasi Server" />
-    </div>
+      <form id="node-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Judul Penemuan / Item</label>
+          <input type="text" id="node-title" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="contoh: Instalasi Server" />
+        </div>
 
-    <div>
-      <label class="block text-xs font-medium text-slate-400 mb-1">Keterangan / Detail</label>
-      <textarea id="node-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="Detail singkat task..."></textarea>
-    </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Keterangan / Detail</label>
+          <textarea id="node-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="Detail singkat task..."></textarea>
+        </div>
 
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1">Icon</label>
-        <select id="node-icon" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-          <option value="fa-flask">🧪 Flask (Sains)</option>
-          <option value="fa-fire">🔥 Fire (Energi/Api)</option>
-          <option value="fa-gem">💎 Gem (Material)</option>
-          <option value="fa-car-side">🚗 Vehicle (Kendaraan)</option>
-          <option value="fa-bolt">⚡ Electricity (Listrik)</option>
-          <option value="fa-dumpster-fire">🏭 Furnace (Pabrik/Tungku)</option>
-          <option value="fa-shield-halved">🛡️ Shield (Baja/Armor)</option>
-          <option value="fa-play">▶️ Start Node</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1">Status</label>
-        <select id="node-status" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-          <option value="locked">🔒 Locked (Belum)</option>
-          <option value="in-progress">⏳ Crafting (Proses)</option>
-          <option value="completed">✅ Acquired (Selesai)</option>
-        </select>
-      </div>
-    </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Icon</label>
+            <select id="node-icon" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+              <option value="fa-flask">🧪 Flask (Sains)</option>
+              <option value="fa-fire">🔥 Fire (Energi/Api)</option>
+              <option value="fa-gem">💎 Gem (Material)</option>
+              <option value="fa-car-side">🚗 Vehicle (Kendaraan)</option>
+              <option value="fa-bolt">⚡ Electricity (Listrik)</option>
+              <option value="fa-dumpster-fire">🏭 Furnace (Pabrik/Tungku)</option>
+              <option value="fa-shield-halved">🛡️ Shield (Baja/Armor)</option>
+              <option value="fa-play">▶️ Start Node</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Status</label>
+            <select id="node-status" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+              <option value="locked">🔒 Locked (Belum)</option>
+              <option value="in-progress">⏳ Crafting (Proses)</option>
+              <option value="completed">✅ Acquired (Selesai)</option>
+            </select>
+          </div>
+        </div>
 
-    <div>
-      <label class="block text-xs font-medium text-slate-400 mb-1">Tanggal Pengerjaan</label>
-      <input type="date" id="node-date" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" />
-    </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Tanggal Pengerjaan</label>
+          <input type="date" id="node-date" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" />
+        </div>
 
-    <div>
-      <label class="block text-xs font-medium text-slate-400 mb-1">Syarat / Parent (Bisa pilih banyak)</label>
-      <select id="node-parents" multiple class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 h-20">
-      </select>
-      <span class="text-[10px] text-slate-500">Tahan tombol Ctrl / Cmd untuk memilih beberapa parent.</span>
-    </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Syarat / Parent (Bisa pilih banyak)</label>
+          <select id="node-parents" multiple class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 h-20">
+          </select>
+          <span class="text-[10px] text-slate-500">Tahan tombol Ctrl / Cmd untuk memilih beberapa parent.</span>
+        </div>
 
-    <div class="flex justify-between items-center pt-2 border-t border-slate-800">
-      <button type="button" id="btn-delete-node" class="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1">
-        <i class="fa-solid fa-trash"></i> Hapus Node
-      </button>
-      <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-lg font-bold text-xs transition">
-        Simpan Penemuan
-      </button>
+        <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+          <button type="button" id="btn-delete-node" class="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-trash"></i> Hapus Node
+          </button>
+          <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-lg font-bold text-xs transition">
+            Simpan Penemuan
+          </button>
+        </div>
+      </form>
     </div>
-  </form>
-</div>
   </div>
 
   <!-- Modal 2: Buat / Edit Proyek -->
-
   <div id="project-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl">
       <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
@@ -192,7 +186,6 @@
   </div>
 
   <!-- Modal 3: Confirm Dialog -->
-
   <div id="confirm-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl text-center">
       <div class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
@@ -200,16 +193,15 @@
       </div>
       <h3 id="confirm-title" class="font-bold text-slate-100 text-base mb-1">Konfirmasi</h3>
       <p id="confirm-message" class="text-xs text-slate-400 mb-5">Apakah Anda yakin ingin melanjutkan tindakan ini?</p>
-
-  <div class="flex justify-center gap-3">
-    <button id="btn-confirm-cancel" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">Batal</button>
-    <button id="btn-confirm-action" class="bg-red-500 hover:bg-red-400 text-slate-950 px-4 py-2 rounded-lg text-xs font-bold transition">Ya, Lanjutkan</button>
-  </div>
-</div>
+      
+      <div class="flex justify-center gap-3">
+        <button id="btn-confirm-cancel" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-semibold transition">Batal</button>
+        <button id="btn-confirm-action" class="bg-red-500 hover:bg-red-400 text-slate-950 px-4 py-2 rounded-lg text-xs font-bold transition">Ya, Lanjutkan</button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal 4: Alert Dialog -->
-
   <div id="alert-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl text-center">
       <div id="alert-icon-wrap" class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-3">
@@ -217,14 +209,12 @@
       </div>
       <h3 id="alert-title" class="font-bold text-slate-100 text-base mb-1">Informasi</h3>
       <p id="alert-message" class="text-xs text-slate-400 mb-5">Pesan informasi...</p>
-
-  <button id="btn-alert-ok" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 py-2 rounded-lg text-xs font-bold transition">OK</button>
-</div>
+      
+      <button id="btn-alert-ok" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 py-2 rounded-lg text-xs font-bold transition">OK</button>
+    </div>
   </div>
 
   <!-- External JS Script -->
-
   <script src="app.js"></script>
-
 </body>
 </html>
