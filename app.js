@@ -30,6 +30,9 @@ let dragStartY = 0;
 let initialNodeX = 0;
 let initialNodeY = 0;
 
+// Custom Confirm Callback
+let onConfirmAction = null;
+
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => {
   renderHeader();
@@ -100,7 +103,6 @@ function renderBoard() {
 function drawLine(svg, source, target) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   
-  // Center coordinates of node (width: 176px, height: ~110px)
   const x1 = source.x + 88;
   const y1 = source.y + 55;
   const x2 = target.x + 88;
@@ -167,17 +169,15 @@ function getStatusBadgeHTML(status) {
 }
 
 /* -------------------------------------------------------------
-   PAN LAYAR & DRAG NODE HANDLERS
+   PAN & DRAG HANDLERS
 ------------------------------------------------------------- */
 function setupPanAndDrag() {
   const viewport = document.getElementById('map-viewport');
 
-  // Mouse Down Event
   viewport.addEventListener('mousedown', (e) => {
     const nodeEl = e.target.closest('.craft-node');
     
     if (nodeEl) {
-      // Direct Click/Drag on Node
       isDraggingNode = true;
       draggedNodeId = nodeEl.dataset.id;
       nodeEl.classList.add('is-dragging');
@@ -191,14 +191,12 @@ function setupPanAndDrag() {
         initialNodeY = nodeData.y;
       }
     } else {
-      // Drag Canvas Screen (Pan)
       isPanning = true;
       startPanX = e.clientX - panX;
       startPanY = e.clientY - panY;
     }
   });
 
-  // Mouse Move Event
   window.addEventListener('mousemove', (e) => {
     if (isDraggingNode && draggedNodeId) {
       const deltaX = e.clientX - dragStartX;
@@ -209,7 +207,6 @@ function setupPanAndDrag() {
         nodeData.x = Math.max(0, initialNodeX + deltaX);
         nodeData.y = Math.max(0, initialNodeY + deltaY);
         
-        // Fast Render while Dragging
         const nodeEl = document.querySelector(`.craft-node[data-id="${draggedNodeId}"]`);
         if (nodeEl) {
           nodeEl.style.left = `${nodeData.x}px`;
@@ -225,17 +222,15 @@ function setupPanAndDrag() {
     }
   });
 
-  // Mouse Up Event
   window.addEventListener('mouseup', (e) => {
     if (isDraggingNode) {
       const deltaX = Math.abs(e.clientX - dragStartX);
       const deltaY = Math.abs(e.clientY - dragStartY);
       
-      // If moved less than 4px, treat as a Click event to open Modal
       if (deltaX < 4 && deltaY < 4 && draggedNodeId) {
         openNodeModal(draggedNodeId);
       } else {
-        saveData(); // Save new node positions
+        saveData();
       }
       
       const nodeEl = document.querySelector(`.craft-node[data-id="${draggedNodeId}"]`);
@@ -271,8 +266,9 @@ function updateConnectionsOnly() {
 }
 
 /* -------------------------------------------------------------
-   MODAL & APP EVENT LISTENERS
+   MODAL HANDLERS (UNIFIED CUSTOM MODALS)
 ------------------------------------------------------------- */
+// Node Modal
 function openNodeModal(id = null) {
   activeNodeId = id;
   const modal = document.getElementById('node-modal');
@@ -325,7 +321,45 @@ function closeNodeModal() {
   activeNodeId = null;
 }
 
+// Project Modal
+function openProjectModal() {
+  const modal = document.getElementById('project-modal');
+  document.getElementById('input-project-name').value = appData.projectName;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeProjectModal() {
+  const modal = document.getElementById('project-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+// Confirm Modal (Global Helper)
+function openConfirmModal(title, message, callback, actionText = 'Ya, Lanjutkan') {
+  const modal = document.getElementById('confirm-modal');
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('btn-confirm-action').textContent = actionText;
+  
+  onConfirmAction = callback;
+  
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeConfirmModal() {
+  const modal = document.getElementById('confirm-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  onConfirmAction = null;
+}
+
+/* -------------------------------------------------------------
+   SETUP EVENT LISTENERS
+------------------------------------------------------------- */
 function setupEventListeners() {
+  // Node Modal Events
   document.getElementById('btn-add-node').addEventListener('click', () => openNodeModal());
   document.getElementById('btn-close-modal').addEventListener('click', closeNodeModal);
   
@@ -361,27 +395,67 @@ function setupEventListeners() {
     closeNodeModal();
   });
 
+  // Hapus Node via Custom Confirm Modal
   document.getElementById('btn-delete-node').addEventListener('click', () => {
-    if (activeNodeId && confirm('Hapus item penemuan ini?')) {
-      appData.nodes = appData.nodes.filter(n => n.id !== activeNodeId);
-      appData.nodes.forEach(n => {
-        if (n.parents) {
-          n.parents = n.parents.filter(pId => pId !== activeNodeId);
-        }
-      });
-      saveData();
-      closeNodeModal();
+    if (activeNodeId) {
+      openConfirmModal(
+        'Hapus Penemuan ini?',
+        'Langkah ini akan menghapus node item dari peta crafting secara permanen.',
+        () => {
+          appData.nodes = appData.nodes.filter(n => n.id !== activeNodeId);
+          appData.nodes.forEach(n => {
+            if (n.parents) {
+              n.parents = n.parents.filter(pId => pId !== activeNodeId);
+            }
+          });
+          saveData();
+          closeNodeModal();
+        },
+        'Hapus Node'
+      );
     }
   });
 
-  document.getElementById('btn-edit-project').addEventListener('click', () => {
-    const newName = prompt('Masukkan Nama Project Roadmap:', appData.projectName);
-    if (newName && newName.trim() !== '') {
-      appData.projectName = newName.trim();
+  // Project Modal Events
+  document.getElementById('btn-edit-project').addEventListener('click', openProjectModal);
+  document.getElementById('btn-close-project-modal').addEventListener('click', closeProjectModal);
+  document.getElementById('btn-cancel-project-modal').addEventListener('click', closeProjectModal);
+  
+  document.getElementById('project-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const newName = document.getElementById('input-project-name').value.trim();
+    if (newName) {
+      appData.projectName = newName;
       saveData();
+      closeProjectModal();
     }
   });
 
+  // Confirm Modal Actions
+  document.getElementById('btn-confirm-cancel').addEventListener('click', closeConfirmModal);
+  document.getElementById('btn-confirm-action').addEventListener('click', () => {
+    if (typeof onConfirmAction === 'function') {
+      onConfirmAction();
+    }
+    closeConfirmModal();
+  });
+
+  // Reset Map via Custom Confirm Modal
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    openConfirmModal(
+      'Reset Peta Penemuan?',
+      'Semua node dan struktur peta yang telah diubah akan kembali ke posisi awal.',
+      () => {
+        panX = 0;
+        panY = 0;
+        appData = JSON.parse(JSON.stringify(defaultData));
+        saveData();
+      },
+      'Ya, Reset Data'
+    );
+  });
+
+  // Export Data JSON
   document.getElementById('btn-export').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -390,14 +464,5 @@ function setupEventListeners() {
     a.download = `roadmap_${appData.projectName.toLowerCase().replace(/\s+/g, '_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  });
-
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    if (confirm('Kembalikan peta ke data awal? Perubahan Anda akan hilang.')) {
-      panX = 0;
-      panY = 0;
-      appData = JSON.parse(JSON.stringify(defaultData));
-      saveData();
-    }
   });
 }
