@@ -1,4 +1,4 @@
-// Data default jika LocalStorage kosong
+// Data default
 const defaultData = {
   projectName: "PROYEK SAINS DR. STONE",
   nodes: [
@@ -59,7 +59,7 @@ function renderBoard() {
   const nodeMap = {};
   appData.nodes.forEach(node => { nodeMap[node.id] = node; });
 
-  // 1. Render Connections (Lines)
+  // 1. Draw Connection Lines
   appData.nodes.forEach(node => {
     if (node.parents && node.parents.length > 0) {
       node.parents.forEach(parentId => {
@@ -81,20 +81,17 @@ function renderBoard() {
 function drawLine(svg, source, target) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   
-  // Calculate center of nodes (width: 176px / height: ~120px)
   const x1 = source.x + 88;
   const y1 = source.y + 60;
   const x2 = target.x + 88;
   const y2 = target.y + 60;
   
-  // Curved Bezier Path
   const dx = Math.abs(x2 - x1) * 0.5;
   const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
   
   path.setAttribute("d", d);
   path.setAttribute("fill", "none");
   
-  // Line styling based on target status
   if (target.status === 'completed') {
     path.setAttribute("stroke", "#10b981");
     path.setAttribute("stroke-width", "3");
@@ -149,14 +146,12 @@ function getStatusBadgeHTML(status) {
   return `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 rounded">LOCKED</span>`;
 }
 
-// Modal Handlers
 function openNodeModal(id = null) {
   activeNodeId = id;
   const modal = document.getElementById('node-modal');
   const titleEl = document.getElementById('modal-title');
   const btnDelete = document.getElementById('btn-delete-node');
   
-  // Populate Parent Selection Options
   const parentSelect = document.getElementById('node-parents');
   parentSelect.innerHTML = '';
   
@@ -170,7 +165,6 @@ function openNodeModal(id = null) {
   });
 
   if (id) {
-    // Edit Existing Node
     titleEl.textContent = 'Edit Milestone / Penemuan';
     btnDelete.classList.remove('hidden');
     const node = appData.nodes.find(n => n.id === id);
@@ -187,7 +181,6 @@ function openNodeModal(id = null) {
       });
     }
   } else {
-    // Add New Node
     titleEl.textContent = 'Tambah Milestone Baru';
     btnDelete.classList.add('hidden');
     document.getElementById('node-title').value = '';
@@ -210,11 +203,9 @@ function closeNodeModal() {
 }
 
 function setupEventListeners() {
-  // Modal Buttons
   document.getElementById('btn-add-node').addEventListener('click', () => openNodeModal());
   document.getElementById('btn-close-modal').addEventListener('click', closeNodeModal);
   
-  // Form Submit
   document.getElementById('node-form').addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -230,13 +221,11 @@ function setupEventListeners() {
     };
 
     if (activeNodeId) {
-      // Update
       const index = appData.nodes.findIndex(n => n.id === activeNodeId);
       if (index !== -1) {
         appData.nodes[index] = { ...appData.nodes[index], ...formData };
       }
     } else {
-      // Create New
       const newId = 'node_' + Date.now();
       appData.nodes.push({ id: newId, ...formData });
     }
@@ -245,11 +234,9 @@ function setupEventListeners() {
     closeNodeModal();
   });
 
-  // Delete Node
   document.getElementById('btn-delete-node').addEventListener('click', () => {
     if (activeNodeId && confirm('Hapus item penemuan ini?')) {
       appData.nodes = appData.nodes.filter(n => n.id !== activeNodeId);
-      // Remove references from parents
       appData.nodes.forEach(n => {
         if (n.parents) {
           n.parents = n.parents.filter(pId => pId !== activeNodeId);
@@ -260,7 +247,6 @@ function setupEventListeners() {
     }
   });
 
-  // Edit Project Title
   document.getElementById('btn-edit-project').addEventListener('click', () => {
     const newName = prompt('Masukkan Nama Project Roadmap:', appData.projectName);
     if (newName && newName.trim() !== '') {
@@ -269,7 +255,6 @@ function setupEventListeners() {
     }
   });
 
-  // Export Data JSON
   document.getElementById('btn-export').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -280,7 +265,6 @@ function setupEventListeners() {
     URL.revokeObjectURL(url);
   });
 
-  // Reset Data
   document.getElementById('btn-reset').addEventListener('click', () => {
     if (confirm('Kembalikan peta ke data awal? Perubahan Anda akan hilang.')) {
       appData = JSON.parse(JSON.stringify(defaultData));
