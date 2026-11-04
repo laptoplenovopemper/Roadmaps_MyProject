@@ -1,19 +1,14 @@
-// Data default
-const defaultData = {
-  projectName: "PROYEK SAINS DR. STONE",
-  nodes: [
-    { id: "start", title: "MULAI", desc: "Titik awal penemuan sains", icon: "fa-play", status: "completed", x: 100, y: 300, parents: [] },
-    { id: "iron", title: "Biji Besi", desc: "Mengumpulkan pasir besi di sungai", icon: "fa-gem", status: "completed", x: 350, y: 180, parents: ["start"] },
-    { id: "charcoal", title: "Arang", desc: "Membakar kayu di dalam tungku", icon: "fa-fire", status: "completed", x: 350, y: 420, parents: ["start"] },
-    { id: "furnace", title: "Tungku Tinggi", desc: "Tungku pembakaran suhu tinggi", icon: "fa-dumpster-fire", status: "in-progress", x: 600, y: 300, parents: ["iron", "charcoal"] },
-    { id: "steel", title: "Baja Industri", desc: "Besi murni yang diperkuat karbon", icon: "fa-shield-halved", status: "locked", x: 850, y: 300, parents: ["furnace"] },
-    { id: "goal", title: "GOAL: MOBIL SAINS", desc: "Kendaraan tempur kerajaan sains", icon: "fa-car-side", status: "locked", x: 1100, y: 300, parents: ["steel"] }
-  ]
-};
+// CONFIGURATION: URL Google Apps Script Web App Anda
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzefvuOmcLV4u7WqRXN47DckTK-FQ9_LXLFOAnXQlGfaLI4BZ9PCPGGBqmWgt2NjAUo/exec";
 
-// Application State
-let appData = loadData();
+// State Management
+let currentProjectId = null;
+let currentProjectName = "";
+let currentNodes = [];
+let projectsList = [];
+
 let activeNodeId = null;
+let isProjectModalEdit = false;
 
 // Pan Canvas State
 let panX = 0;
@@ -30,35 +25,174 @@ let dragStartY = 0;
 let initialNodeX = 0;
 let initialNodeY = 0;
 
-// Custom Confirm Callback
 let onConfirmAction = null;
 
-// Initial Load
 document.addEventListener('DOMContentLoaded', () => {
-  renderHeader();
-  renderBoard();
   setupEventListeners();
   setupPanAndDrag();
+  fetchProjectsList();
 });
 
-function loadData() {
-  const saved = localStorage.getItem('drstone_roadmap_simple');
-  if (saved) {
-    try { return JSON.parse(saved); } catch (e) { console.error(e); }
+/* -------------------------------------------------------------
+   DATABASE GOOGLE SHEETS API CALLS
+------------------------------------------------------------- */
+function showLoading(msg = "Memuat data...") {
+  const el = document.getElementById('loading-spinner');
+  if (el) {
+    document.getElementById('loading-text').textContent = msg;
+    el.classList.remove('hidden');
   }
-  return JSON.parse(JSON.stringify(defaultData));
 }
 
-function saveData() {
-  localStorage.setItem('drstone_roadmap_simple', JSON.stringify(appData));
-  renderHeader();
-  renderBoard();
+function hideLoading() {
+  const el = document.getElementById('loading-spinner');
+  if (el) el.classList.add('hidden');
 }
 
-function renderHeader() {
-  document.getElementById('project-title').textContent = appData.projectName;
-  const total = appData.nodes.length;
-  const completed = appData.nodes.filter(n => n.status === 'completed').length;
+function fetchProjectsList() {
+  showLoading("Memuat daftar proyek...");
+  fetch(`${APPS_SCRIPT_URL}?action=getProjects`)
+    .then(res => res.json())
+    .then(data => {
+      hideLoading();
+      if (data.status === 'success') {
+        projectsList = data.projects || [];
+        renderProjectDropdown();
+      }
+    })
+    .catch(err => {
+      hideLoading();
+      console.error("Gagal memuat daftar proyek:", err);
+    });
+}
+
+function fetchProjectData(projectId) {
+  showLoading("Memuat roadmap proyek...");
+  fetch(`${APPS_SCRIPT_URL}?action=getProjectData&projectId=${projectId}`)
+    .then(res => res.json())
+    .then(data => {
+      hideLoading();
+      if (data.status === 'success') {
+        currentNodes = data.nodes || [];
+        renderBoard();
+        renderHeaderStats();
+      }
+    })
+    .catch(err => {
+      hideLoading();
+      console.error("Gagal memuat data proyek:", err);
+    });
+}
+
+function saveCurrentProjectToDB() {
+  if (!currentProjectId) return;
+  showLoading("Menyimpan ke Google Sheets...");
+  
+  const payload = {
+    action: "saveProject",
+    projectId: currentProjectId,
+    projectName: currentProjectName,
+    nodes: currentNodes
+  };
+
+  fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload)
+  })
+    .then(res => res.json())
+    .then(data => {
+      hideLoading();
+      if (data.status === 'success') {
+        alert("Berhasil disimpan ke Google Sheets!");
+      } else {
+        alert("Gagal menyimpan data: " + (data.message || "Unknown error"));
+      }
+    })
+    .catch(err => {
+      hideLoading();
+      console.error("Error saving data:", err);
+      alert("Terjadi kesalahan saat menyimpan data ke Sheets.");
+    });
+}
+
+function deleteProjectFromDB(projectId) {
+  showLoading("Menghapus proyek...");
+  const payload = { action: "deleteProject", projectId: projectId };
+  fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload)
+  })
+    .then(res => res.json())
+    .then(data => {
+      hideLoading();
+      if (data.status === 'success') {
+        currentProjectId = null;
+        currentProjectName = "";
+        currentNodes = [];
+        document.getElementById('map-canvas').classList.add('hidden');
+        document.getElementById('empty-state').classList.remove('hidden');
+        document.getElementById('btn-edit-project').classList.add('hidden');
+        document.getElementById('btn-delete-project').classList.add('hidden');
+        fetchProjectsList();
+      }
+    })
+    .catch(err => {
+      hideLoading();
+      console.error("Error deleting project:", err);
+    });
+}
+
+/* -------------------------------------------------------------
+   RENDER FUNCTIONS
+------------------------------------------------------------- */
+function renderProjectDropdown() {
+  const selector = document.getElementById('project-selector');
+  selector.innerHTML = '<option value="">-- Pilih Proyek --</option>';
+  
+  projectsList.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    if (p.id === currentProjectId) opt.selected = true;
+    selector.appendChild(opt);
+  });
+
+  if (!currentProjectId) {
+    document.getElementById('map-canvas').classList.add('hidden');
+    document.getElementById('empty-state').classList.remove('hidden');
+    document.getElementById('btn-edit-project').classList.add('hidden');
+    document.getElementById('btn-delete-project').classList.add('hidden');
+  }
+}
+
+function selectProject(projectId) {
+  if (!projectId) {
+    currentProjectId = null;
+    currentProjectName = "";
+    currentNodes = [];
+    renderProjectDropdown();
+    return;
+  }
+  
+  const proj = projectsList.find(p => p.id == projectId);
+  if (proj) {
+    currentProjectId = proj.id;
+    currentProjectName = proj.name;
+    
+    document.getElementById('empty-state').classList.add('hidden');
+    document.getElementById('map-canvas').classList.remove('hidden');
+    document.getElementById('btn-edit-project').classList.remove('hidden');
+    document.getElementById('btn-delete-project').classList.remove('hidden');
+    
+    fetchProjectData(currentProjectId);
+  }
+}
+
+function renderHeaderStats() {
+  const total = currentNodes.length;
+  const completed = currentNodes.filter(n => n.status === 'completed').length;
   const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
   
   document.getElementById('stat-acquired').textContent = completed;
@@ -72,14 +206,13 @@ function renderBoard() {
   const svg = document.getElementById('connections-layer');
   
   canvas.style.transform = `translate(${panX}px, ${panY}px)`;
-  
   canvas.querySelectorAll('.craft-node').forEach(n => n.remove());
   svg.innerHTML = '';
 
   const nodeMap = {};
-  appData.nodes.forEach(node => { nodeMap[node.id] = node; });
+  currentNodes.forEach(node => { nodeMap[node.id] = node; });
 
-  appData.nodes.forEach(node => {
+  currentNodes.forEach(node => {
     if (node.parents && node.parents.length > 0) {
       node.parents.forEach(parentId => {
         const parent = nodeMap[parentId];
@@ -90,7 +223,7 @@ function renderBoard() {
     }
   });
 
-  appData.nodes.forEach(node => {
+  currentNodes.forEach(node => {
     const el = createNodeElement(node);
     canvas.appendChild(el);
   });
@@ -98,7 +231,6 @@ function renderBoard() {
 
 function drawLine(svg, source, target) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  
   const x1 = source.x + 88;
   const y1 = source.y + 55;
   const x2 = target.x + 88;
@@ -164,11 +296,14 @@ function getStatusBadgeHTML(status) {
   return `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 rounded">LOCKED</span>`;
 }
 
-/* Pan & Drag Handlers */
+/* -------------------------------------------------------------
+   PAN & DRAG HANDLERS
+------------------------------------------------------------- */
 function setupPanAndDrag() {
   const viewport = document.getElementById('map-viewport');
 
   viewport.addEventListener('mousedown', (e) => {
+    if (!currentProjectId) return;
     const nodeEl = e.target.closest('.craft-node');
     
     if (nodeEl) {
@@ -179,7 +314,7 @@ function setupPanAndDrag() {
       dragStartX = e.clientX;
       dragStartY = e.clientY;
       
-      const nodeData = appData.nodes.find(n => n.id === draggedNodeId);
+      const nodeData = currentNodes.find(n => n.id === draggedNodeId);
       if (nodeData) {
         initialNodeX = nodeData.x;
         initialNodeY = nodeData.y;
@@ -196,7 +331,7 @@ function setupPanAndDrag() {
       const deltaX = e.clientX - dragStartX;
       const deltaY = e.clientY - dragStartY;
       
-      const nodeData = appData.nodes.find(n => n.id === draggedNodeId);
+      const nodeData = currentNodes.find(n => n.id === draggedNodeId);
       if (nodeData) {
         nodeData.x = Math.max(0, initialNodeX + deltaX);
         nodeData.y = Math.max(0, initialNodeY + deltaY);
@@ -223,8 +358,6 @@ function setupPanAndDrag() {
       
       if (deltaX < 4 && deltaY < 4 && draggedNodeId) {
         openNodeModal(draggedNodeId);
-      } else {
-        saveData();
       }
       
       const nodeEl = document.querySelector(`.craft-node[data-id="${draggedNodeId}"]`);
@@ -245,9 +378,9 @@ function updateConnectionsOnly() {
   svg.innerHTML = '';
   
   const nodeMap = {};
-  appData.nodes.forEach(node => { nodeMap[node.id] = node; });
+  currentNodes.forEach(node => { nodeMap[node.id] = node; });
 
-  appData.nodes.forEach(node => {
+  currentNodes.forEach(node => {
     if (node.parents && node.parents.length > 0) {
       node.parents.forEach(parentId => {
         const parent = nodeMap[parentId];
@@ -259,8 +392,11 @@ function updateConnectionsOnly() {
   });
 }
 
-/* Modal Handlers */
+/* -------------------------------------------------------------
+   MODAL HANDLERS
+------------------------------------------------------------- */
 function openNodeModal(id = null) {
+  if (!currentProjectId) return alert("Pilih proyek terlebih dahulu.");
   activeNodeId = id;
   const modal = document.getElementById('node-modal');
   const titleEl = document.getElementById('modal-title');
@@ -269,11 +405,8 @@ function openNodeModal(id = null) {
   const parentSelect = document.getElementById('node-parents');
   parentSelect.innerHTML = '';
   
-  // Filter available nodes as parents (exclude current node being edited)
-  const availableParents = appData.nodes.filter(n => n.id !== id);
-
+  const availableParents = currentNodes.filter(n => n.id !== id);
   if (availableParents.length === 0) {
-    // Jika belum ada node lain sama sekali
     parentSelect.innerHTML = '<option value="" disabled selected>Belum ada node lain yang tersedia</option>';
   } else {
     availableParents.forEach(n => {
@@ -285,9 +418,9 @@ function openNodeModal(id = null) {
   }
 
   if (id) {
-    titleEl.textContent = 'Edit Milestone / Penemuan';
+    titleEl.textContent = 'Edit Milestone / Task';
     btnDelete.classList.remove('hidden');
-    const node = appData.nodes.find(n => n.id === id);
+    const node = currentNodes.find(n => n.id === id);
     if (node) {
       document.getElementById('node-title').value = node.title;
       document.getElementById('node-desc').value = node.desc || '';
@@ -320,9 +453,20 @@ function closeNodeModal() {
   activeNodeId = null;
 }
 
-function openProjectModal() {
+function openProjectModal(isEdit = false) {
+  isProjectModalEdit = isEdit;
   const modal = document.getElementById('project-modal');
-  document.getElementById('input-project-name').value = appData.projectName;
+  const title = document.getElementById('project-modal-title');
+  const input = document.getElementById('input-project-name');
+
+  if (isEdit) {
+    title.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Rename Proyek`;
+    input.value = currentProjectName;
+  } else {
+    title.innerHTML = `<i class="fa-solid fa-folder-plus"></i> Proyek Baru`;
+    input.value = '';
+  }
+
   modal.classList.remove('hidden');
   modal.classList.add('flex');
 }
@@ -333,14 +477,11 @@ function closeProjectModal() {
   modal.classList.remove('flex');
 }
 
-function openConfirmModal(title, message, callback, actionText = 'Ya, Lanjutkan') {
+function openConfirmModal(title, message, callback) {
   const modal = document.getElementById('confirm-modal');
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-message').textContent = message;
-  document.getElementById('btn-confirm-action').textContent = actionText;
-  
   onConfirmAction = callback;
-  
   modal.classList.remove('hidden');
   modal.classList.add('flex');
 }
@@ -352,30 +493,71 @@ function closeConfirmModal() {
   onConfirmAction = null;
 }
 
-/* Event Listeners Setup */
+/* -------------------------------------------------------------
+   EVENTS SETUP
+------------------------------------------------------------- */
 function setupEventListeners() {
+  document.getElementById('project-selector').addEventListener('change', (e) => {
+    selectProject(e.target.value);
+  });
+
+  document.getElementById('btn-create-project').addEventListener('click', () => openProjectModal(false));
+  document.getElementById('btn-empty-create').addEventListener('click', () => openProjectModal(false));
+  document.getElementById('btn-edit-project').addEventListener('click', () => openProjectModal(true));
+
+  document.getElementById('btn-delete-project').addEventListener('click', () => {
+    if (!currentProjectId) return;
+    openConfirmModal(
+      'Hapus Proyek Ini?',
+      `Seluruh roadmap "${currentProjectName}" akan dihapus dari Google Sheets.`,
+      () => deleteProjectFromDB(currentProjectId)
+    );
+  });
+
+  document.getElementById('btn-close-project-modal').addEventListener('click', closeProjectModal);
+  document.getElementById('btn-cancel-project-modal').addEventListener('click', closeProjectModal);
+
+  document.getElementById('project-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('input-project-name').value.trim();
+    if (!name) return;
+
+    if (isProjectModalEdit) {
+      currentProjectName = name;
+      saveCurrentProjectToDB();
+      fetchProjectsList();
+    } else {
+      currentProjectId = "proj_" + Date.now();
+      currentProjectName = name;
+      currentNodes = [];
+      saveCurrentProjectToDB();
+      fetchProjectsList();
+      selectProject(currentProjectId);
+    }
+    closeProjectModal();
+  });
+
   document.getElementById('btn-add-node').addEventListener('click', () => openNodeModal());
   document.getElementById('btn-close-modal').addEventListener('click', closeNodeModal);
-  
+
   document.getElementById('node-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    
     const selectedParents = Array.from(document.getElementById('node-parents').selectedOptions)
       .map(o => o.value)
-      .filter(val => val !== ""); // Abaikan jika opsi kosong/disabled terpilih
-    
+      .filter(val => val !== "");
+
     if (activeNodeId) {
-      const index = appData.nodes.findIndex(n => n.id === activeNodeId);
-      if (index !== -1) {
-        appData.nodes[index].title = document.getElementById('node-title').value.trim();
-        appData.nodes[index].desc = document.getElementById('node-desc').value.trim();
-        appData.nodes[index].icon = document.getElementById('node-icon').value;
-        appData.nodes[index].status = document.getElementById('node-status').value;
-        appData.nodes[index].parents = selectedParents;
+      const idx = currentNodes.findIndex(n => n.id === activeNodeId);
+      if (idx !== -1) {
+        currentNodes[idx].title = document.getElementById('node-title').value.trim();
+        currentNodes[idx].desc = document.getElementById('node-desc').value.trim();
+        currentNodes[idx].icon = document.getElementById('node-icon').value;
+        currentNodes[idx].status = document.getElementById('node-status').value;
+        currentNodes[idx].parents = selectedParents;
       }
     } else {
-      const newId = 'node_' + Date.now();
-      appData.nodes.push({
+      const newId = "node_" + Date.now();
+      currentNodes.push({
         id: newId,
         title: document.getElementById('node-title').value.trim(),
         desc: document.getElementById('node-desc').value.trim(),
@@ -386,74 +568,35 @@ function setupEventListeners() {
         parents: selectedParents
       });
     }
-    
-    saveData();
+
+    renderBoard();
+    renderHeaderStats();
     closeNodeModal();
   });
 
   document.getElementById('btn-delete-node').addEventListener('click', () => {
     if (activeNodeId) {
       openConfirmModal(
-        'Hapus Penemuan ini?',
-        'Langkah ini akan menghapus node item dari peta crafting secara permanen.',
+        'Hapus Task ini?',
+        'Node item ini akan dihapus dari proyek.',
         () => {
-          appData.nodes = appData.nodes.filter(n => n.id !== activeNodeId);
-          appData.nodes.forEach(n => {
-            if (n.parents) {
-              n.parents = n.parents.filter(pId => pId !== activeNodeId);
-            }
+          currentNodes = currentNodes.filter(n => n.id !== activeNodeId);
+          currentNodes.forEach(n => {
+            if (n.parents) n.parents = n.parents.filter(pId => pId !== activeNodeId);
           });
-          saveData();
+          renderBoard();
+          renderHeaderStats();
           closeNodeModal();
-        },
-        'Hapus Node'
+        }
       );
     }
   });
 
-  document.getElementById('btn-edit-project').addEventListener('click', openProjectModal);
-  document.getElementById('btn-close-project-modal').addEventListener('click', closeProjectModal);
-  document.getElementById('btn-cancel-project-modal').addEventListener('click', closeProjectModal);
-  
-  document.getElementById('project-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const newName = document.getElementById('input-project-name').value.trim();
-    if (newName) {
-      appData.projectName = newName;
-      saveData();
-      closeProjectModal();
-    }
-  });
+  document.getElementById('btn-save-db').addEventListener('click', saveCurrentProjectToDB);
 
   document.getElementById('btn-confirm-cancel').addEventListener('click', closeConfirmModal);
   document.getElementById('btn-confirm-action').addEventListener('click', () => {
-    if (typeof onConfirmAction === 'function') {
-      onConfirmAction();
-    }
+    if (typeof onConfirmAction === 'function') onConfirmAction();
     closeConfirmModal();
-  });
-
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    openConfirmModal(
-      'Reset Peta Penemuan?',
-      'Semua node dan struktur peta yang telah diubah akan kembali ke posisi awal.',
-      () => {
-        panX = 0;
-        panY = 0;
-        appData = JSON.parse(JSON.stringify(defaultData));
-        saveData();
-      },
-      'Ya, Reset Data'
-    );
-  });
-
-  document.getElementById('btn-export').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `roadmap_${appData.projectName.toLowerCase().replace(/\s+/g, '_')}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
   });
 }
