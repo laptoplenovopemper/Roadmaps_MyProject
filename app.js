@@ -8,6 +8,7 @@ let currentNodes = [];
 let projectsList = [];
 
 let activeNodeId = null;
+let contextMenuNodeId = null;
 let isProjectModalEdit = false;
 
 // Pan Canvas State
@@ -73,7 +74,10 @@ function fetchProjectData(projectId) {
     .then(data => {
       hideLoading();
       if (data.status === 'success') {
-        currentNodes = data.nodes || [];
+        currentNodes = (data.nodes || []).map(n => ({
+          ...n,
+          date: n.date || ""
+        }));
         renderBoard();
         renderHeaderStats();
       }
@@ -232,9 +236,9 @@ function renderBoard() {
 function drawLine(svg, source, target) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   const x1 = source.x + 88;
-  const y1 = source.y + 55;
+  const y1 = source.y + 60;
   const x2 = target.x + 88;
-  const y2 = target.y + 55;
+  const y2 = target.y + 60;
   
   const dx = Math.abs(x2 - x1) * 0.5;
   const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
@@ -265,17 +269,29 @@ function createNodeElement(node) {
   div.dataset.id = node.id;
   
   const statusBadge = getStatusBadgeHTML(node.status);
+  const dateFormatted = node.date ? `<div class="text-[10px] text-slate-400 mt-1 font-mono"><i class="fa-regular fa-calendar mr-1"></i>${node.date}</div>` : '';
   
   div.innerHTML = `
     <div class="flex items-center justify-between mb-2 pointer-events-none">
       <span class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400">
         <i class="fa-solid ${node.icon}"></i>
       </span>
-      ${statusBadge}
+      <div class="flex flex-col items-end">
+        ${statusBadge}
+        ${dateFormatted}
+      </div>
     </div>
     <h4 class="font-bold text-sm text-slate-100 truncate mb-1 pointer-events-none">${node.title}</h4>
     <p class="text-xs text-slate-400 line-clamp-2 pointer-events-none">${node.desc || 'Tidak ada keterangan'}</p>
   `;
+
+  // Event Klik Kanan (Context Menu) pada Node
+  div.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    contextMenuNodeId = node.id;
+    showContextMenu(e.clientX, e.clientY);
+  });
   
   return div;
 }
@@ -297,16 +313,22 @@ function getStatusBadgeHTML(status) {
 }
 
 /* -------------------------------------------------------------
-   PAN & DRAG HANDLERS
+   PAN & DRAG & CONTEXT MENU HANDLERS
 ------------------------------------------------------------- */
 function setupPanAndDrag() {
   const viewport = document.getElementById('map-viewport');
 
+  // Tutup context menu saat klik di luar
+  window.addEventListener('click', () => {
+    hideContextMenu();
+  });
+
   viewport.addEventListener('mousedown', (e) => {
+    hideContextMenu();
     if (!currentProjectId) return;
     const nodeEl = e.target.closest('.craft-node');
     
-    if (nodeEl) {
+    if (nodeEl && e.button === 0) { // Klik kiri
       isDraggingNode = true;
       draggedNodeId = nodeEl.dataset.id;
       nodeEl.classList.add('is-dragging');
@@ -319,7 +341,7 @@ function setupPanAndDrag() {
         initialNodeX = nodeData.x;
         initialNodeY = nodeData.y;
       }
-    } else {
+    } else if (e.button === 0) {
       isPanning = true;
       startPanX = e.clientX - panX;
       startPanY = e.clientY - panY;
@@ -371,6 +393,18 @@ function setupPanAndDrag() {
       isPanning = false;
     }
   });
+}
+
+function showContextMenu(x, y) {
+  const menu = document.getElementById('node-context-menu');
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  menu.classList.remove('hidden');
+}
+
+function hideContextMenu() {
+  const menu = document.getElementById('node-context-menu');
+  menu.classList.add('hidden');
 }
 
 function updateConnectionsOnly() {
@@ -429,6 +463,7 @@ function openNodeModal(id = null) {
       document.getElementById('node-desc').value = node.desc || '';
       document.getElementById('node-icon').value = node.icon;
       document.getElementById('node-status').value = node.status;
+      document.getElementById('node-date').value = node.date || '';
       
       Array.from(parentSelect.options).forEach(opt => {
         if ((node.parents || []).includes(opt.value)) {
@@ -443,6 +478,7 @@ function openNodeModal(id = null) {
     document.getElementById('node-desc').value = '';
     document.getElementById('node-icon').value = 'fa-flask';
     document.getElementById('node-status').value = 'locked';
+    document.getElementById('node-date').value = '';
   }
   
   modal.classList.remove('hidden');
@@ -585,6 +621,7 @@ function setupEventListeners() {
         currentNodes[idx].desc = document.getElementById('node-desc').value.trim();
         currentNodes[idx].icon = document.getElementById('node-icon').value;
         currentNodes[idx].status = document.getElementById('node-status').value;
+        currentNodes[idx].date = document.getElementById('node-date').value;
         currentNodes[idx].parents = selectedParents;
       }
     } else {
@@ -595,6 +632,7 @@ function setupEventListeners() {
         desc: document.getElementById('node-desc').value.trim(),
         icon: document.getElementById('node-icon').value,
         status: document.getElementById('node-status').value,
+        date: document.getElementById('node-date').value,
         x: Math.abs(panX) + 300,
         y: Math.abs(panY) + 250,
         parents: selectedParents
@@ -622,6 +660,45 @@ function setupEventListeners() {
         }
       );
     }
+  });
+
+  // Context Menu Actions (Copy & Delete)
+  document.getElementById('ctx-copy').addEventListener('click', () => {
+    if (contextMenuNodeId) {
+      const targetNode = currentNodes.find(n => n.id === contextMenuNodeId);
+      if (targetNode) {
+        const newNodeId = "node_" + Date.now();
+        const duplicatedNode = {
+          ...targetNode,
+          id: newNodeId,
+          title: targetNode.title + " (Copy)",
+          x: targetNode.x + 30,
+          y: targetNode.y + 30
+        };
+        currentNodes.push(duplicatedNode);
+        renderBoard();
+        renderHeaderStats();
+      }
+    }
+    hideContextMenu();
+  });
+
+  document.getElementById('ctx-delete').addEventListener('click', () => {
+    if (contextMenuNodeId) {
+      openConfirmModal(
+        'Hapus Task ini?',
+        'Node item ini akan dihapus dari proyek.',
+        () => {
+          currentNodes = currentNodes.filter(n => n.id !== contextMenuNodeId);
+          currentNodes.forEach(n => {
+            if (n.parents) n.parents = n.parents.filter(pId => pId !== contextMenuNodeId);
+          });
+          renderBoard();
+          renderHeaderStats();
+        }
+      );
+    }
+    hideContextMenu();
   });
 
   document.getElementById('btn-save-db').addEventListener('click', saveCurrentProjectToDB);
