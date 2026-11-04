@@ -220,32 +220,40 @@ function renderBoard() {
   canvas.querySelectorAll('.craft-node').forEach(n => n.remove());
   svg.innerHTML = '';
 
+  // 1. Render Nodes Terlebih Dahulu agar ukuran elemen (offsetWidth/offsetHeight) terbaca akurat
+  const nodeElementsMap = {};
+  currentNodes.forEach(node => {
+    const el = createNodeElement(node);
+    canvas.appendChild(el);
+    nodeElementsMap[node.id] = el;
+  });
+
+  // 2. Render Garis Penghubung Berdasarkan Posisi Aktual Elemen
   const nodeMap = {};
   currentNodes.forEach(node => { nodeMap[node.id] = node; });
 
   currentNodes.forEach(node => {
     if (node.parents && node.parents.length > 0) {
       node.parents.forEach(parentId => {
-        const parent = nodeMap[parentId];
-        if (parent) {
-          drawLine(svg, parent, node);
+        const parentNode = nodeMap[parentId];
+        const parentEl = nodeElementsMap[parentId];
+        const targetEl = nodeElementsMap[node.id];
+        if (parentNode && parentEl && targetEl) {
+          drawLineDynamic(svg, parentNode, node, parentEl, targetEl);
         }
       });
     }
   });
-
-  currentNodes.forEach(node => {
-    const el = createNodeElement(node);
-    canvas.appendChild(el);
-  });
 }
 
-function drawLine(svg, source, target) {
+function drawLineDynamic(svg, source, target, sourceEl, targetEl) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  const x1 = source.x + 88;
-  const y1 = source.y + 60;
-  const x2 = target.x + 88;
-  const y2 = target.y + 60;
+  
+  // Titik tengah dinamis berdasarkan ukuran elemen DOM aktual
+  const x1 = source.x + (sourceEl.offsetWidth / 2);
+  const y1 = source.y + (sourceEl.offsetHeight / 2);
+  const x2 = target.x + (targetEl.offsetWidth / 2);
+  const y2 = target.y + (targetEl.offsetHeight / 2);
   
   const dx = Math.abs(x2 - x1) * 0.5;
   const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
@@ -270,7 +278,7 @@ function drawLine(svg, source, target) {
 
 function createNodeElement(node) {
   const div = document.createElement('div');
-  div.className = `craft-node absolute w-44 bg-slate-900 border-2 rounded-xl p-3 cursor-grab select-none z-10 ${getStatusBorderClass(node.status)}`;
+  div.className = `craft-node absolute bg-slate-900 border-2 rounded-xl p-3 cursor-grab select-none z-10 ${getStatusBorderClass(node.status)}`;
   div.style.left = `${node.x}px`;
   div.style.top = `${node.y}px`;
   div.dataset.id = node.id;
@@ -279,17 +287,17 @@ function createNodeElement(node) {
   const dateFormatted = node.date ? `<div class="text-[10px] text-slate-400 mt-1 font-mono"><i class="fa-regular fa-calendar mr-1"></i>${node.date}</div>` : '';
   
   div.innerHTML = `
-    <div class="flex items-center justify-between mb-2 pointer-events-none">
-      <span class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400">
+    <div class="flex items-start justify-between gap-3 mb-2 pointer-events-none">
+      <span class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shrink-0">
         <i class="fa-solid ${node.icon}"></i>
       </span>
-      <div class="flex flex-col items-end">
+      <div class="flex flex-col items-end shrink-0">
         ${statusBadge}
         ${dateFormatted}
       </div>
     </div>
-    <h4 class="font-bold text-sm text-slate-100 truncate mb-1 pointer-events-none">${node.title}</h4>
-    <p class="text-xs text-slate-400 line-clamp-2 pointer-events-none">${node.desc || 'Tidak ada keterangan'}</p>
+    <h4 class="font-bold text-sm text-slate-100 mb-1 pointer-events-none whitespace-normal">${node.title}</h4>
+    <p class="text-xs text-slate-400 pointer-events-none whitespace-normal">${node.desc || 'Tidak ada keterangan'}</p>
   `;
 
   // Context Menu Handler
@@ -420,12 +428,19 @@ function updateConnectionsOnly() {
   const nodeMap = {};
   currentNodes.forEach(node => { nodeMap[node.id] = node; });
 
+  const nodeElementsMap = {};
+  currentNodes.forEach(node => {
+    nodeElementsMap[node.id] = document.querySelector(`.craft-node[data-id="${node.id}"]`);
+  });
+
   currentNodes.forEach(node => {
     if (node.parents && node.parents.length > 0) {
       node.parents.forEach(parentId => {
-        const parent = nodeMap[parentId];
-        if (parent) {
-          drawLine(svg, parent, node);
+        const parentNode = nodeMap[parentId];
+        const parentEl = nodeElementsMap[parentId];
+        const targetEl = nodeElementsMap[node.id];
+        if (parentNode && parentEl && targetEl) {
+          drawLineDynamic(svg, parentNode, node, parentEl, targetEl);
         }
       });
     }
@@ -660,7 +675,6 @@ function setupEventListeners() {
           });
           renderBoard();
           renderHeaderStats();
-          closeNodeModal();
         }
       );
     }
