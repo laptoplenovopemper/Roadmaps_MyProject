@@ -71,17 +71,14 @@ function renderBoard() {
   const canvas = document.getElementById('map-canvas');
   const svg = document.getElementById('connections-layer');
   
-  // Apply canvas pan transformation
   canvas.style.transform = `translate(${panX}px, ${panY}px)`;
   
-  // Clean existing nodes & lines
   canvas.querySelectorAll('.craft-node').forEach(n => n.remove());
   svg.innerHTML = '';
 
   const nodeMap = {};
   appData.nodes.forEach(node => { nodeMap[node.id] = node; });
 
-  // 1. Draw Connection Lines
   appData.nodes.forEach(node => {
     if (node.parents && node.parents.length > 0) {
       node.parents.forEach(parentId => {
@@ -93,7 +90,6 @@ function renderBoard() {
     }
   });
 
-  // 2. Render Nodes
   appData.nodes.forEach(node => {
     const el = createNodeElement(node);
     canvas.appendChild(el);
@@ -168,9 +164,7 @@ function getStatusBadgeHTML(status) {
   return `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 rounded">LOCKED</span>`;
 }
 
-/* -------------------------------------------------------------
-   PAN & DRAG HANDLERS
-------------------------------------------------------------- */
+/* Pan & Drag Handlers */
 function setupPanAndDrag() {
   const viewport = document.getElementById('map-viewport');
 
@@ -265,10 +259,7 @@ function updateConnectionsOnly() {
   });
 }
 
-/* -------------------------------------------------------------
-   MODAL HANDLERS (UNIFIED CUSTOM MODALS)
-------------------------------------------------------------- */
-// Node Modal
+/* Modal Handlers */
 function openNodeModal(id = null) {
   activeNodeId = id;
   const modal = document.getElementById('node-modal');
@@ -278,14 +269,20 @@ function openNodeModal(id = null) {
   const parentSelect = document.getElementById('node-parents');
   parentSelect.innerHTML = '';
   
-  appData.nodes.forEach(n => {
-    if (n.id !== id) {
+  // Filter available nodes as parents (exclude current node being edited)
+  const availableParents = appData.nodes.filter(n => n.id !== id);
+
+  if (availableParents.length === 0) {
+    // Jika belum ada node lain sama sekali
+    parentSelect.innerHTML = '<option value="" disabled selected>Belum ada node lain yang tersedia</option>';
+  } else {
+    availableParents.forEach(n => {
       const opt = document.createElement('option');
       opt.value = n.id;
       opt.textContent = n.title;
       parentSelect.appendChild(opt);
-    }
-  });
+    });
+  }
 
   if (id) {
     titleEl.textContent = 'Edit Milestone / Penemuan';
@@ -298,7 +295,9 @@ function openNodeModal(id = null) {
       document.getElementById('node-status').value = node.status;
       
       Array.from(parentSelect.options).forEach(opt => {
-        opt.selected = (node.parents || []).includes(opt.value);
+        if ((node.parents || []).includes(opt.value)) {
+          opt.selected = true;
+        }
       });
     }
   } else {
@@ -321,7 +320,6 @@ function closeNodeModal() {
   activeNodeId = null;
 }
 
-// Project Modal
 function openProjectModal() {
   const modal = document.getElementById('project-modal');
   document.getElementById('input-project-name').value = appData.projectName;
@@ -335,7 +333,6 @@ function closeProjectModal() {
   modal.classList.remove('flex');
 }
 
-// Confirm Modal (Global Helper)
 function openConfirmModal(title, message, callback, actionText = 'Ya, Lanjutkan') {
   const modal = document.getElementById('confirm-modal');
   document.getElementById('confirm-title').textContent = title;
@@ -355,18 +352,17 @@ function closeConfirmModal() {
   onConfirmAction = null;
 }
 
-/* -------------------------------------------------------------
-   SETUP EVENT LISTENERS
-------------------------------------------------------------- */
+/* Event Listeners Setup */
 function setupEventListeners() {
-  // Node Modal Events
   document.getElementById('btn-add-node').addEventListener('click', () => openNodeModal());
   document.getElementById('btn-close-modal').addEventListener('click', closeNodeModal);
   
   document.getElementById('node-form').addEventListener('submit', (e) => {
     e.preventDefault();
     
-    const selectedParents = Array.from(document.getElementById('node-parents').selectedOptions).map(o => o.value);
+    const selectedParents = Array.from(document.getElementById('node-parents').selectedOptions)
+      .map(o => o.value)
+      .filter(val => val !== ""); // Abaikan jika opsi kosong/disabled terpilih
     
     if (activeNodeId) {
       const index = appData.nodes.findIndex(n => n.id === activeNodeId);
@@ -395,7 +391,6 @@ function setupEventListeners() {
     closeNodeModal();
   });
 
-  // Hapus Node via Custom Confirm Modal
   document.getElementById('btn-delete-node').addEventListener('click', () => {
     if (activeNodeId) {
       openConfirmModal(
@@ -416,7 +411,6 @@ function setupEventListeners() {
     }
   });
 
-  // Project Modal Events
   document.getElementById('btn-edit-project').addEventListener('click', openProjectModal);
   document.getElementById('btn-close-project-modal').addEventListener('click', closeProjectModal);
   document.getElementById('btn-cancel-project-modal').addEventListener('click', closeProjectModal);
@@ -431,7 +425,6 @@ function setupEventListeners() {
     }
   });
 
-  // Confirm Modal Actions
   document.getElementById('btn-confirm-cancel').addEventListener('click', closeConfirmModal);
   document.getElementById('btn-confirm-action').addEventListener('click', () => {
     if (typeof onConfirmAction === 'function') {
@@ -440,7 +433,6 @@ function setupEventListeners() {
     closeConfirmModal();
   });
 
-  // Reset Map via Custom Confirm Modal
   document.getElementById('btn-reset').addEventListener('click', () => {
     openConfirmModal(
       'Reset Peta Penemuan?',
@@ -455,7 +447,6 @@ function setupEventListeners() {
     );
   });
 
-  // Export Data JSON
   document.getElementById('btn-export').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
