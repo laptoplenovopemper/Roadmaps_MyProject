@@ -40,3 +40,14 @@ svg#connections-layer {
   z-index: 40 !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
+
+/* Perbaikan Kontras Dropdown Project */
+#project-selector {
+  color: #f8fafc; /* Text putih terang */
+}
+
+#project-selector option {
+  background-color: #0f172a; /* Latar belakang gelap (Slate 900) */
+  color: #f8fafc; /* Text putih terang */
+  padding: 10px;
+}
