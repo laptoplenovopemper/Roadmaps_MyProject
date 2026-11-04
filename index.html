@@ -15,7 +15,6 @@
   <!-- Header Control Bar -->
   <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between z-20 shadow-lg">
     <div class="flex items-center gap-3">
-      <!-- Dropdown Multi-Project Selector -->
       <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
         <i class="fa-solid fa-folder-tree text-amber-400 text-xs"></i>
         <select id="project-selector" class="bg-transparent text-sm font-bold text-slate-100 focus:outline-none cursor-pointer">
@@ -71,7 +70,7 @@
     <div id="empty-state" class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-6">
       <i class="fa-solid fa-diagram-project text-5xl text-slate-700 mb-3"></i>
       <h3 class="text-lg font-bold text-slate-300">Belum Ada Proyek Dipilih</h3>
-      <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Pilih proyek yang ada di pojok kiri atas atau buat proyek baru untuk mulai membuat roadmap.</p>
+      <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Pilih proyek di pojok kiri atas atau buat proyek baru untuk mulai membuat roadmap.</p>
       <button id="btn-empty-create" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-lg font-bold text-xs">
         + Buat Proyek Baru
       </button>
@@ -82,6 +81,16 @@
       <svg id="connections-layer" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
     </div>
   </main>
+
+  <!-- Context Menu (Klik Kanan Node) -->
+  <div id="node-context-menu" class="fixed hidden bg-slate-900 border border-slate-700 shadow-2xl rounded-lg py-1.5 z-50 w-36 text-xs select-none">
+    <button id="ctx-copy" class="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-amber-400 flex items-center gap-2">
+      <i class="fa-solid fa-copy"></i> Copy Node
+    </button>
+    <button id="ctx-delete" class="w-full text-left px-3 py-2 text-red-400 hover:bg-slate-800 hover:text-red-300 flex items-center gap-2 border-t border-slate-800">
+      <i class="fa-solid fa-trash"></i> Delete Node
+    </button>
+  </div>
 
   <!-- Modal 1: Edit / Tambah Node -->
   <div id="node-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
@@ -129,8 +138,13 @@
         </div>
 
         <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Tanggal Pengerjaan</label>
+          <input type="date" id="node-date" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" />
+        </div>
+
+        <div>
           <label class="block text-xs font-medium text-slate-400 mb-1">Syarat / Parent (Bisa pilih banyak)</label>
-          <select id="node-parents" multiple class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 h-24">
+          <select id="node-parents" multiple class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 h-20">
           </select>
           <span class="text-[10px] text-slate-500">Tahan tombol Ctrl / Cmd untuk memilih beberapa parent.</span>
         </div>
@@ -171,7 +185,7 @@
     </div>
   </div>
 
-  <!-- Modal 3: Confirm Dialog (Yes/No) -->
+  <!-- Modal 3: Confirm Dialog -->
   <div id="confirm-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl text-center">
       <div class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
@@ -187,7 +201,7 @@
     </div>
   </div>
 
-  <!-- Modal 4: Alert Dialog (Pengganti alert() browser) -->
+  <!-- Modal 4: Alert Dialog -->
   <div id="alert-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl text-center">
       <div id="alert-icon-wrap" class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-3">
