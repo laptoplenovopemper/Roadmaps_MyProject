@@ -19,7 +19,24 @@
     linear-gradient(to bottom, rgba(51, 65, 85, 0.2) 1px, transparent 1px);
 }
 
-/* Dynamic SVG Overlay Layer */
+/* SVG Connection Lines Overlay */
 svg#connections-layer {
   pointer-events: none;
+}
+
+/* Interactive Node Elements */
+.craft-node {
+  touch-action: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.craft-node:hover {
+  box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.15);
+}
+
+.craft-node.is-dragging {
+  opacity: 0.9;
+  cursor: grabbing !important;
+  z-index: 40 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
