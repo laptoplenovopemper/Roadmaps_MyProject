@@ -2,12 +2,12 @@
 const defaultData = {
   projectName: "PROYEK SAINS DR. STONE",
   nodes: [
-    { id: "start", title: "MULAI", desc: "Titik awal penemuan sains", icon: "fa-play", status: "completed", x: 60, y: 300, parents: [] },
-    { id: "iron", title: "Biji Besi", desc: "Mengumpulkan pasir besi di sungai", icon: "fa-gem", status: "completed", x: 250, y: 180, parents: ["start"] },
-    { id: "charcoal", title: "Arang", desc: "Membakar kayu di dalam tungku", icon: "fa-fire", status: "completed", x: 250, y: 420, parents: ["start"] },
-    { id: "furnace", title: "Tungku Tinggi", desc: "Tungku pembakaran suhu tinggi", icon: "fa-dumpster-fire", status: "in-progress", x: 450, y: 300, parents: ["iron", "charcoal"] },
-    { id: "steel", title: "Baja Industri", desc: "Besi murni yang diperkuat karbon", icon: "fa-shield-halved", status: "locked", x: 650, y: 300, parents: ["furnace"] },
-    { id: "goal", title: "GOAL: MOBIL SAINS", desc: "Kendaraan tempur kerajaan sains", icon: "fa-car-side", status: "locked", x: 860, y: 300, parents: ["steel"] }
+    { id: "start", title: "MULAI", desc: "Titik awal penemuan sains", icon: "fa-play", status: "completed", x: 100, y: 300, parents: [] },
+    { id: "iron", title: "Biji Besi", desc: "Mengumpulkan pasir besi di sungai", icon: "fa-gem", status: "completed", x: 350, y: 180, parents: ["start"] },
+    { id: "charcoal", title: "Arang", desc: "Membakar kayu di dalam tungku", icon: "fa-fire", status: "completed", x: 350, y: 420, parents: ["start"] },
+    { id: "furnace", title: "Tungku Tinggi", desc: "Tungku pembakaran suhu tinggi", icon: "fa-dumpster-fire", status: "in-progress", x: 600, y: 300, parents: ["iron", "charcoal"] },
+    { id: "steel", title: "Baja Industri", desc: "Besi murni yang diperkuat karbon", icon: "fa-shield-halved", status: "locked", x: 850, y: 300, parents: ["furnace"] },
+    { id: "goal", title: "GOAL: MOBIL SAINS", desc: "Kendaraan tempur kerajaan sains", icon: "fa-car-side", status: "locked", x: 1100, y: 300, parents: ["steel"] }
   ]
 };
 
@@ -15,11 +15,27 @@ const defaultData = {
 let appData = loadData();
 let activeNodeId = null;
 
+// Pan Canvas State
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let startPanX = 0;
+let startPanY = 0;
+
+// Drag Node State
+let isDraggingNode = false;
+let draggedNodeId = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let initialNodeX = 0;
+let initialNodeY = 0;
+
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => {
   renderHeader();
   renderBoard();
   setupEventListeners();
+  setupPanAndDrag();
 });
 
 function loadData() {
@@ -52,7 +68,10 @@ function renderBoard() {
   const canvas = document.getElementById('map-canvas');
   const svg = document.getElementById('connections-layer');
   
-  // Clean canvas (keep SVG layer)
+  // Apply canvas pan transformation
+  canvas.style.transform = `translate(${panX}px, ${panY}px)`;
+  
+  // Clean existing nodes & lines
   canvas.querySelectorAll('.craft-node').forEach(n => n.remove());
   svg.innerHTML = '';
 
@@ -81,10 +100,11 @@ function renderBoard() {
 function drawLine(svg, source, target) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   
+  // Center coordinates of node (width: 176px, height: ~110px)
   const x1 = source.x + 88;
-  const y1 = source.y + 60;
+  const y1 = source.y + 55;
   const x2 = target.x + 88;
-  const y2 = target.y + 60;
+  const y2 = target.y + 55;
   
   const dx = Math.abs(x2 - x1) * 0.5;
   const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
@@ -109,31 +129,31 @@ function drawLine(svg, source, target) {
 
 function createNodeElement(node) {
   const div = document.createElement('div');
-  div.className = `craft-node absolute w-44 bg-slate-900 border-2 rounded-xl p-3 cursor-pointer shadow-md select-none ${getStatusBorderClass(node.status)}`;
+  div.className = `craft-node absolute w-44 bg-slate-900 border-2 rounded-xl p-3 cursor-grab select-none z-10 ${getStatusBorderClass(node.status)}`;
   div.style.left = `${node.x}px`;
   div.style.top = `${node.y}px`;
+  div.dataset.id = node.id;
   
   const statusBadge = getStatusBadgeHTML(node.status);
   
   div.innerHTML = `
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center justify-between mb-2 pointer-events-none">
       <span class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400">
         <i class="fa-solid ${node.icon}"></i>
       </span>
       ${statusBadge}
     </div>
-    <h4 class="font-bold text-sm text-slate-100 truncate mb-1">${node.title}</h4>
-    <p class="text-xs text-slate-400 line-clamp-2">${node.desc || 'Tidak ada keterangan'}</p>
+    <h4 class="font-bold text-sm text-slate-100 truncate mb-1 pointer-events-none">${node.title}</h4>
+    <p class="text-xs text-slate-400 line-clamp-2 pointer-events-none">${node.desc || 'Tidak ada keterangan'}</p>
   `;
   
-  div.addEventListener('click', () => openNodeModal(node.id));
   return div;
 }
 
 function getStatusBorderClass(status) {
   if (status === 'completed') return 'border-emerald-500 bg-emerald-950/20';
   if (status === 'in-progress') return 'border-amber-500 bg-amber-950/20';
-  return 'border-slate-700 opacity-80';
+  return 'border-slate-700 opacity-90';
 }
 
 function getStatusBadgeHTML(status) {
@@ -146,6 +166,113 @@ function getStatusBadgeHTML(status) {
   return `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 rounded">LOCKED</span>`;
 }
 
+/* -------------------------------------------------------------
+   PAN LAYAR & DRAG NODE HANDLERS
+------------------------------------------------------------- */
+function setupPanAndDrag() {
+  const viewport = document.getElementById('map-viewport');
+
+  // Mouse Down Event
+  viewport.addEventListener('mousedown', (e) => {
+    const nodeEl = e.target.closest('.craft-node');
+    
+    if (nodeEl) {
+      // Direct Click/Drag on Node
+      isDraggingNode = true;
+      draggedNodeId = nodeEl.dataset.id;
+      nodeEl.classList.add('is-dragging');
+      
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      
+      const nodeData = appData.nodes.find(n => n.id === draggedNodeId);
+      if (nodeData) {
+        initialNodeX = nodeData.x;
+        initialNodeY = nodeData.y;
+      }
+    } else {
+      // Drag Canvas Screen (Pan)
+      isPanning = true;
+      startPanX = e.clientX - panX;
+      startPanY = e.clientY - panY;
+    }
+  });
+
+  // Mouse Move Event
+  window.addEventListener('mousemove', (e) => {
+    if (isDraggingNode && draggedNodeId) {
+      const deltaX = e.clientX - dragStartX;
+      const deltaY = e.clientY - dragStartY;
+      
+      const nodeData = appData.nodes.find(n => n.id === draggedNodeId);
+      if (nodeData) {
+        nodeData.x = Math.max(0, initialNodeX + deltaX);
+        nodeData.y = Math.max(0, initialNodeY + deltaY);
+        
+        // Fast Render while Dragging
+        const nodeEl = document.querySelector(`.craft-node[data-id="${draggedNodeId}"]`);
+        if (nodeEl) {
+          nodeEl.style.left = `${nodeData.x}px`;
+          nodeEl.style.top = `${nodeData.y}px`;
+        }
+        updateConnectionsOnly();
+      }
+    } else if (isPanning) {
+      panX = e.clientX - startPanX;
+      panY = e.clientY - startPanY;
+      const canvas = document.getElementById('map-canvas');
+      canvas.style.transform = `translate(${panX}px, ${panY}px)`;
+    }
+  });
+
+  // Mouse Up Event
+  window.addEventListener('mouseup', (e) => {
+    if (isDraggingNode) {
+      const deltaX = Math.abs(e.clientX - dragStartX);
+      const deltaY = Math.abs(e.clientY - dragStartY);
+      
+      // If moved less than 4px, treat as a Click event to open Modal
+      if (deltaX < 4 && deltaY < 4 && draggedNodeId) {
+        openNodeModal(draggedNodeId);
+      } else {
+        saveData(); // Save new node positions
+      }
+      
+      const nodeEl = document.querySelector(`.craft-node[data-id="${draggedNodeId}"]`);
+      if (nodeEl) nodeEl.classList.remove('is-dragging');
+      
+      isDraggingNode = false;
+      draggedNodeId = null;
+    }
+
+    if (isPanning) {
+      isPanning = false;
+    }
+  });
+}
+
+function updateConnectionsOnly() {
+  const svg = document.getElementById('connections-layer');
+  svg.innerHTML = '';
+  
+  const nodeMap = {};
+  appData.nodes.forEach(node => { nodeMap[node.id] = node; });
+
+  appData.nodes.forEach(node => {
+    if (node.parents && node.parents.length > 0) {
+      node.parents.forEach(parentId => {
+        const parent = nodeMap[parentId];
+        if (parent) {
+          drawLine(svg, parent, node);
+        }
+      });
+    }
+  });
+}
+
+/* -------------------------------------------------------------
+   MODAL & APP EVENT LISTENERS
+------------------------------------------------------------- */
 function openNodeModal(id = null) {
   activeNodeId = id;
   const modal = document.getElementById('node-modal');
@@ -173,8 +300,6 @@ function openNodeModal(id = null) {
       document.getElementById('node-desc').value = node.desc || '';
       document.getElementById('node-icon').value = node.icon;
       document.getElementById('node-status').value = node.status;
-      document.getElementById('node-pos-x').value = node.x;
-      document.getElementById('node-pos-y').value = node.y;
       
       Array.from(parentSelect.options).forEach(opt => {
         opt.selected = (node.parents || []).includes(opt.value);
@@ -187,8 +312,6 @@ function openNodeModal(id = null) {
     document.getElementById('node-desc').value = '';
     document.getElementById('node-icon').value = 'fa-flask';
     document.getElementById('node-status').value = 'locked';
-    document.getElementById('node-pos-x').value = 350;
-    document.getElementById('node-pos-y').value = 300;
   }
   
   modal.classList.remove('hidden');
@@ -210,24 +333,28 @@ function setupEventListeners() {
     e.preventDefault();
     
     const selectedParents = Array.from(document.getElementById('node-parents').selectedOptions).map(o => o.value);
-    const formData = {
-      title: document.getElementById('node-title').value.trim(),
-      desc: document.getElementById('node-desc').value.trim(),
-      icon: document.getElementById('node-icon').value,
-      status: document.getElementById('node-status').value,
-      x: parseInt(document.getElementById('node-pos-x').value) || 100,
-      y: parseInt(document.getElementById('node-pos-y').value) || 100,
-      parents: selectedParents
-    };
-
+    
     if (activeNodeId) {
       const index = appData.nodes.findIndex(n => n.id === activeNodeId);
       if (index !== -1) {
-        appData.nodes[index] = { ...appData.nodes[index], ...formData };
+        appData.nodes[index].title = document.getElementById('node-title').value.trim();
+        appData.nodes[index].desc = document.getElementById('node-desc').value.trim();
+        appData.nodes[index].icon = document.getElementById('node-icon').value;
+        appData.nodes[index].status = document.getElementById('node-status').value;
+        appData.nodes[index].parents = selectedParents;
       }
     } else {
       const newId = 'node_' + Date.now();
-      appData.nodes.push({ id: newId, ...formData });
+      appData.nodes.push({
+        id: newId,
+        title: document.getElementById('node-title').value.trim(),
+        desc: document.getElementById('node-desc').value.trim(),
+        icon: document.getElementById('node-icon').value,
+        status: document.getElementById('node-status').value,
+        x: Math.abs(panX) + 300,
+        y: Math.abs(panY) + 250,
+        parents: selectedParents
+      });
     }
     
     saveData();
@@ -267,6 +394,8 @@ function setupEventListeners() {
 
   document.getElementById('btn-reset').addEventListener('click', () => {
     if (confirm('Kembalikan peta ke data awal? Perubahan Anda akan hilang.')) {
+      panX = 0;
+      panY = 0;
       appData = JSON.parse(JSON.stringify(defaultData));
       saveData();
     }
