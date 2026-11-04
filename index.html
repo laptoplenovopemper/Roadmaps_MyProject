@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dr. STONE Science Crafting Roadmap</title>
+  <title>Roadmap Multi-Project (Google Sheets DB)</title>
   <!-- CDN Tailwind CSS & FontAwesome Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -15,19 +15,31 @@
   <!-- Header Control Bar -->
   <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between z-20 shadow-lg">
     <div class="flex items-center gap-3">
-      <div class="bg-amber-500 text-slate-950 px-2 py-1 rounded font-black text-xs uppercase tracking-wider">
-        Crafting Map
+      <!-- Dropdown Multi-Project Selector -->
+      <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
+        <i class="fa-solid fa-folder-tree text-amber-400 text-xs"></i>
+        <select id="project-selector" class="bg-transparent text-sm font-bold text-slate-100 focus:outline-none cursor-pointer">
+          <option value="">-- Pilih Proyek --</option>
+        </select>
       </div>
-      <h1 id="project-title" class="text-xl font-bold text-slate-100">PROYEK SAINS DR. STONE</h1>
-      <button id="btn-edit-project" class="text-slate-400 hover:text-amber-400 text-xs transition">
-        <i class="fa-solid fa-pen"></i> Edit
+
+      <button id="btn-create-project" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1">
+        <i class="fa-solid fa-plus"></i> Proyek Baru
+      </button>
+
+      <button id="btn-edit-project" class="text-slate-400 hover:text-amber-400 text-xs transition hidden">
+        <i class="fa-solid fa-pen"></i> Rename
+      </button>
+
+      <button id="btn-delete-project" class="text-slate-500 hover:text-red-400 text-xs transition hidden">
+        <i class="fa-solid fa-trash"></i> Hapus Proyek
       </button>
     </div>
 
     <!-- Progress & Action Buttons -->
     <div class="flex items-center gap-6">
       <div class="flex items-center gap-3 bg-slate-950 px-4 py-1.5 rounded-lg border border-slate-800">
-        <div class="text-xs text-slate-400">Progress Penemuan:</div>
+        <div class="text-xs text-slate-400">Progress:</div>
         <div class="w-32 bg-slate-800 h-2 rounded-full overflow-hidden">
           <div id="progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
         </div>
@@ -40,23 +52,35 @@
         <button id="btn-add-node" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
           <i class="fa-solid fa-plus"></i> Tambah Node
         </button>
-        <button id="btn-export" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg font-semibold text-xs border border-slate-700 transition">
-          <i class="fa-solid fa-download"></i> Export JSON
-        </button>
-        <button id="btn-reset" class="bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 px-3 py-1.5 rounded-lg text-xs border border-slate-700 transition">
-          <i class="fa-solid fa-rotate-left"></i> Reset
+        <button id="btn-save-db" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Sheets
         </button>
       </div>
     </div>
   </header>
 
-  <!-- Interactive Map Viewport (Dapat Digeser) -->
+  <!-- Interactive Map Viewport -->
   <main id="map-viewport" class="flex-1 relative overflow-hidden bg-slate-950 cursor-grab active:cursor-grabbing">
+    <!-- Loading Overlay -->
+    <div id="loading-spinner" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center gap-3 hidden">
+      <div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <p id="loading-text" class="text-xs text-amber-400 font-bold">Memuat data dari Google Sheets...</p>
+    </div>
+
+    <!-- Empty State Message -->
+    <div id="empty-state" class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-6">
+      <i class="fa-solid fa-diagram-project text-5xl text-slate-700 mb-3"></i>
+      <h3 class="text-lg font-bold text-slate-300">Belum Ada Proyek Dipilih</h3>
+      <p class="text-xs text-slate-500 max-w-sm mt-1 mb-4">Pilih proyek yang ada di pojok kiri atas atau buat proyek baru untuk mulai membuat roadmap.</p>
+      <button id="btn-empty-create" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-lg font-bold text-xs">
+        + Buat Proyek Baru
+      </button>
+    </div>
+
     <!-- Map Canvas Transformation Wrapper -->
-    <div id="map-canvas" class="absolute bg-grid-pattern min-w-[3000px] min-h-[2000px] top-0 left-0">
+    <div id="map-canvas" class="absolute bg-grid-pattern min-w-[3000px] min-h-[2000px] top-0 left-0 hidden">
       <!-- SVG Layer for Connection Lines -->
       <svg id="connections-layer" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
-      <!-- Nodes rendered dynamically by app.js -->
     </div>
   </main>
 
@@ -73,17 +97,17 @@
       <form id="node-form" class="space-y-4">
         <div>
           <label class="block text-xs font-medium text-slate-400 mb-1">Judul Penemuan / Item</label>
-          <input type="text" id="node-title" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="contoh: Mobil Sains" />
+          <input type="text" id="node-title" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="contoh: Instalasi Server" />
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Keterangan / Bahan</label>
-          <textarea id="node-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="Detail singkat project..."></textarea>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Keterangan / Detail</label>
+          <textarea id="node-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="Detail singkat task..."></textarea>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Icon (FontAwesome)</label>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Icon</label>
             <select id="node-icon" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
               <option value="fa-flask">🧪 Flask (Sains)</option>
               <option value="fa-fire">🔥 Fire (Energi/Api)</option>
@@ -96,7 +120,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Status Penemuan</label>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Status</label>
             <select id="node-status" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
               <option value="locked">🔒 Locked (Belum)</option>
               <option value="in-progress">⏳ Crafting (Proses)</option>
@@ -108,7 +132,6 @@
         <div>
           <label class="block text-xs font-medium text-slate-400 mb-1">Syarat / Parent (Bisa pilih banyak)</label>
           <select id="node-parents" multiple class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 h-24">
-            <!-- Dynamic options -->
           </select>
           <span class="text-[10px] text-slate-500">Tahan tombol Ctrl / Cmd untuk memilih beberapa parent.</span>
         </div>
@@ -125,12 +148,12 @@
     </div>
   </div>
 
-  <!-- Modal 2: Edit Judul Proyek -->
+  <!-- Modal 2: Buat / Edit Proyek -->
   <div id="project-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl">
       <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
-        <h3 class="font-bold text-amber-400 flex items-center gap-2">
-          <i class="fa-solid fa-pen-to-square"></i> Ubah Nama Proyek
+        <h3 id="project-modal-title" class="font-bold text-amber-400 flex items-center gap-2">
+          <i class="fa-solid fa-folder-plus"></i> Proyek Baru
         </h3>
         <button id="btn-close-project-modal" class="text-slate-500 hover:text-slate-300">
           <i class="fa-solid fa-xmark text-lg"></i>
@@ -139,7 +162,7 @@
       <form id="project-form" class="space-y-4">
         <div>
           <label class="block text-xs font-medium text-slate-400 mb-1">Nama Proyek Roadmap</label>
-          <input type="text" id="input-project-name" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" />
+          <input type="text" id="input-project-name" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500" placeholder="Contoh: Project Notifikasi Mesin" />
         </div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
           <button type="button" id="btn-cancel-project-modal" class="px-3 py-1.5 rounded-lg text-slate-400 hover:bg-slate-800 text-xs font-semibold">Batal</button>
@@ -149,11 +172,11 @@
     </div>
   </div>
 
-  <!-- Modal 3: Confirm Dialog (Seragam untuk Hapus Node / Reset Map) -->
+  <!-- Modal 3: Confirm Dialog -->
   <div id="confirm-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl text-center">
-      <div id="confirm-icon-wrapper" class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
-        <i id="confirm-icon" class="fa-solid fa-triangle-exclamation text-xl"></i>
+      <div class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
+        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
       </div>
       <h3 id="confirm-title" class="font-bold text-slate-100 text-base mb-1">Konfirmasi</h3>
       <p id="confirm-message" class="text-xs text-slate-400 mb-5">Apakah Anda yakin ingin melanjutkan tindakan ini?</p>
