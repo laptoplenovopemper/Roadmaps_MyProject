@@ -104,15 +104,15 @@ function saveCurrentProjectToDB() {
     .then(data => {
       hideLoading();
       if (data.status === 'success') {
-        alert("Berhasil disimpan ke Google Sheets!");
+        openAlertModal("Berhasil!", "Data roadmap berhasil disimpan ke Google Sheets.", "success");
       } else {
-        alert("Gagal menyimpan data: " + (data.message || "Unknown error"));
+        openAlertModal("Gagal", "Gagal menyimpan data: " + (data.message || "Unknown error"), "error");
       }
     })
     .catch(err => {
       hideLoading();
       console.error("Error saving data:", err);
-      alert("Terjadi kesalahan saat menyimpan data ke Sheets.");
+      openAlertModal("Kesalahan", "Terjadi kesalahan saat menyimpan data ke Sheets.", "error");
     });
 }
 
@@ -396,7 +396,10 @@ function updateConnectionsOnly() {
    MODAL HANDLERS
 ------------------------------------------------------------- */
 function openNodeModal(id = null) {
-  if (!currentProjectId) return alert("Pilih proyek terlebih dahulu.");
+  if (!currentProjectId) {
+    openAlertModal("Perhatian", "Pilih proyek terlebih dahulu sebelum menambah atau mengedit node.");
+    return;
+  }
   activeNodeId = id;
   const modal = document.getElementById('node-modal');
   const titleEl = document.getElementById('modal-title');
@@ -491,6 +494,35 @@ function closeConfirmModal() {
   modal.classList.add('hidden');
   modal.classList.remove('flex');
   onConfirmAction = null;
+}
+
+function openAlertModal(title, message, type = "info") {
+  const modal = document.getElementById('alert-modal');
+  document.getElementById('alert-title').textContent = title;
+  document.getElementById('alert-message').textContent = message;
+  
+  const iconWrap = document.getElementById('alert-icon-wrap');
+  const icon = document.getElementById('alert-icon');
+  
+  if (type === "success") {
+    iconWrap.className = "w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-3";
+    icon.className = "fa-solid fa-circle-check text-xl";
+  } else if (type === "error") {
+    iconWrap.className = "w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3";
+    icon.className = "fa-solid fa-circle-exclamation text-xl";
+  } else {
+    iconWrap.className = "w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-3";
+    icon.className = "fa-solid fa-circle-info text-xl";
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeAlertModal() {
+  const modal = document.getElementById('alert-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
 }
 
 /* -------------------------------------------------------------
@@ -599,4 +631,6 @@ function setupEventListeners() {
     if (typeof onConfirmAction === 'function') onConfirmAction();
     closeConfirmModal();
   });
+
+  document.getElementById('btn-alert-ok').addEventListener('click', closeAlertModal);
 }
