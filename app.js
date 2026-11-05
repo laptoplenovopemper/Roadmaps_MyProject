@@ -14,7 +14,7 @@ let isProjectModalEdit = false;
 // Pan & Zoom Canvas State
 let panX = 0;
 let panY = 0;
-let zoomScale = 1; // Skala zoom default 100%
+let zoomScale = 1;
 let isPanning = false;
 let startPanX = 0;
 let startPanY = 0;
@@ -71,6 +71,14 @@ function fetchProjectsList(selectIdTarget = null) {
     });
 }
 
+function formatDateOnly(dateStr) {
+  if (!dateStr) return "";
+  if (typeof dateStr === 'string' && dateStr.includes('T')) {
+    return dateStr.split('T')[0];
+  }
+  return dateStr;
+}
+
 function fetchProjectData(projectId) {
   showLoading("Memuat roadmap proyek...");
   fetch(`${APPS_SCRIPT_URL}?action=getProjectData&projectId=${projectId}`)
@@ -80,7 +88,7 @@ function fetchProjectData(projectId) {
       if (data.status === 'success') {
         currentNodes = (data.nodes || []).map(n => ({
           ...n,
-          date: n.date || ""
+          date: formatDateOnly(n.date)
         }));
         renderBoard();
         renderHeaderStats();
@@ -217,7 +225,6 @@ function renderBoard() {
   const canvas = document.getElementById('map-canvas');
   const svg = document.getElementById('connections-layer');
   
-  // Terapkan transformasi Pan (geser) dan Zoom (skala) pada Canvas
   canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
   canvas.style.transformOrigin = '0 0';
 
@@ -284,8 +291,9 @@ function createNodeElement(node) {
   div.style.top = `${node.y}px`;
   div.dataset.id = node.id;
   
+  const cleanDate = formatDateOnly(node.date);
   const statusBadge = getStatusBadgeHTML(node.status);
-  const dateFormatted = node.date ? `<div class="text-[10px] text-slate-400 mt-1 font-mono"><i class="fa-regular fa-calendar mr-1"></i>${node.date}</div>` : '';
+  const dateFormatted = cleanDate ? `<div class="text-[10px] text-slate-400 mt-1 font-mono"><i class="fa-regular fa-calendar mr-1"></i>${cleanDate}</div>` : '';
   
   div.innerHTML = `
     <div class="flex items-start justify-between gap-3 mb-2 pointer-events-none">
@@ -328,7 +336,7 @@ function getStatusBadgeHTML(status) {
 }
 
 /* -------------------------------------------------------------
-   PAN, ZOOM (SCROLL WHEEL), & DRAG HANDLERS
+   PAN, ZOOM, & DRAG HANDLERS
 ------------------------------------------------------------- */
 function setupPanZoomAndDrag() {
   const viewport = document.getElementById('map-viewport');
@@ -338,7 +346,6 @@ function setupPanZoomAndDrag() {
     hideContextMenu();
   });
 
-  // Fitur Zoom In / Zoom Out dengan Scroll Wheel Mouse
   viewport.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (!currentProjectId) return;
@@ -347,15 +354,13 @@ function setupPanZoomAndDrag() {
     let oldScale = zoomScale;
 
     if (e.deltaY < 0) {
-      zoomScale += zoomIntensity; // Zoom In
+      zoomScale += zoomIntensity;
     } else {
-      zoomScale -= zoomIntensity; // Zoom Out
+      zoomScale -= zoomIntensity;
     }
 
-    // Batasi rentang zoom antara 40% hingga 250%
     zoomScale = Math.max(0.4, Math.min(2.5, zoomScale));
 
-    // Zoom berpusat pada kursor mouse
     const rect = viewport.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -393,7 +398,6 @@ function setupPanZoomAndDrag() {
 
   window.addEventListener('mousemove', (e) => {
     if (isDraggingNode && draggedNodeId) {
-      // Sesuaikan pergerakan drag node dengan skala zoom aktif
       const deltaX = (e.clientX - dragStartX) / zoomScale;
       const deltaY = (e.clientY - dragStartY) / zoomScale;
       
@@ -514,7 +518,7 @@ function openNodeModal(id = null) {
       document.getElementById('node-desc').value = node.desc || '';
       document.getElementById('node-icon').value = node.icon;
       document.getElementById('node-status').value = node.status;
-      document.getElementById('node-date').value = node.date || '';
+      document.getElementById('node-date').value = formatDateOnly(node.date) || '';
       
       Array.from(parentSelect.options).forEach(opt => {
         if ((node.parents || []).includes(opt.value)) {
@@ -684,7 +688,7 @@ function setupEventListeners() {
         date: document.getElementById('node-date').value,
         x: Math.abs(panX) + 300,
         y: Math.abs(panY) + 250,
-        parents: selectedPoints = selectedParents
+        parents: selectedParents
       });
     }
 
@@ -705,12 +709,12 @@ function setupEventListeners() {
           });
           renderBoard();
           renderHeaderStats();
+          closeNodeModal();
         }
       );
     }
   });
 
-  // Context Menu Actions (Copy & Delete)
   document.getElementById('ctx-copy').addEventListener('click', () => {
     if (contextMenuNodeId) {
       const targetNode = currentNodes.find(n => n.id === contextMenuNodeId);
@@ -733,7 +737,6 @@ function setupEventListeners() {
 
   document.getElementById('ctx-delete').addEventListener('click', () => {
     if (contextMenuNodeId) {
-      openConfirm_modal_name = 'Hapus Task ini?';
       openConfirmModal(
         'Hapus Task ini?',
         'Node item ini akan dihapus dari proyek.',
