@@ -24,7 +24,7 @@ svg#connections-layer {
   pointer-events: none;
 }
 
-/* Interactive Node Elements - Flexible & Auto Wrap */
+/* Interactive Node Elements */
 .craft-node {
   touch-action: none;
   min-width: 220px;
