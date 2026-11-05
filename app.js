@@ -11,9 +11,10 @@ let activeNodeId = null;
 let contextMenuNodeId = null;
 let isProjectModalEdit = false;
 
-// Pan Canvas State
+// Pan & Zoom Canvas State
 let panX = 0;
 let panY = 0;
+let zoomScale = 1; // Skala zoom default 100%
 let isPanning = false;
 let startPanX = 0;
 let startPanY = 0;
@@ -30,7 +31,7 @@ let onConfirmAction = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
-  setupPanAndDrag();
+  setupPanZoomAndDrag();
   fetchProjectsList();
 });
 
@@ -216,11 +217,13 @@ function renderBoard() {
   const canvas = document.getElementById('map-canvas');
   const svg = document.getElementById('connections-layer');
   
-  canvas.style.transform = `translate(${panX}px, ${panY}px)`;
+  // Terapkan transformasi Pan (geser) dan Zoom (skala) pada Canvas
+  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+  canvas.style.transformOrigin = '0 0';
+
   canvas.querySelectorAll('.craft-node').forEach(n => n.remove());
   svg.innerHTML = '';
 
-  // 1. Render Nodes Terlebih Dahulu agar ukuran elemen (offsetWidth/offsetHeight) terbaca akurat
   const nodeElementsMap = {};
   currentNodes.forEach(node => {
     const el = createNodeElement(node);
@@ -228,7 +231,6 @@ function renderBoard() {
     nodeElementsMap[node.id] = el;
   });
 
-  // 2. Render Garis Penghubung Berdasarkan Posisi Aktual Elemen
   const nodeMap = {};
   currentNodes.forEach(node => { nodeMap[node.id] = node; });
 
@@ -249,7 +251,6 @@ function renderBoard() {
 function drawLineDynamic(svg, source, target, sourceEl, targetEl) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   
-  // Titik tengah dinamis berdasarkan ukuran elemen DOM aktual
   const x1 = source.x + (sourceEl.offsetWidth / 2);
   const y1 = source.y + (sourceEl.offsetHeight / 2);
   const x2 = target.x + (targetEl.offsetWidth / 2);
@@ -300,7 +301,6 @@ function createNodeElement(node) {
     <p class="text-xs text-slate-400 pointer-events-none whitespace-normal">${node.desc || 'Tidak ada keterangan'}</p>
   `;
 
-  // Context Menu Handler
   div.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -328,14 +328,43 @@ function getStatusBadgeHTML(status) {
 }
 
 /* -------------------------------------------------------------
-   PAN & DRAG & CONTEXT MENU HANDLERS
+   PAN, ZOOM (SCROLL WHEEL), & DRAG HANDLERS
 ------------------------------------------------------------- */
-function setupPanAndDrag() {
+function setupPanZoomAndDrag() {
   const viewport = document.getElementById('map-viewport');
+  const canvas = document.getElementById('map-canvas');
 
   window.addEventListener('click', () => {
     hideContextMenu();
   });
+
+  // Fitur Zoom In / Zoom Out dengan Scroll Wheel Mouse
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (!currentProjectId) return;
+
+    const zoomIntensity = 0.1;
+    let oldScale = zoomScale;
+
+    if (e.deltaY < 0) {
+      zoomScale += zoomIntensity; // Zoom In
+    } else {
+      zoomScale -= zoomIntensity; // Zoom Out
+    }
+
+    // Batasi rentang zoom antara 40% hingga 250%
+    zoomScale = Math.max(0.4, Math.min(2.5, zoomScale));
+
+    // Zoom berpusat pada kursor mouse
+    const rect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    panX = mouseX - (mouseX - panX) * (zoomScale / oldScale);
+    panY = mouseY - (mouseY - panY) * (zoomScale / oldScale);
+
+    canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+  }, { passive: false });
 
   viewport.addEventListener('mousedown', (e) => {
     hideContextMenu();
@@ -364,8 +393,9 @@ function setupPanAndDrag() {
 
   window.addEventListener('mousemove', (e) => {
     if (isDraggingNode && draggedNodeId) {
-      const deltaX = e.clientX - dragStartX;
-      const deltaY = e.clientY - dragStartY;
+      // Sesuaikan pergerakan drag node dengan skala zoom aktif
+      const deltaX = (e.clientX - dragStartX) / zoomScale;
+      const deltaY = (e.clientY - dragStartY) / zoomScale;
       
       const nodeData = currentNodes.find(n => n.id === draggedNodeId);
       if (nodeData) {
@@ -383,7 +413,7 @@ function setupPanAndDrag() {
       panX = e.clientX - startPanX;
       panY = e.clientY - startPanY;
       const canvas = document.getElementById('map-canvas');
-      canvas.style.transform = `translate(${panX}px, ${panY}px)`;
+      canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
     }
   });
 
@@ -654,7 +684,7 @@ function setupEventListeners() {
         date: document.getElementById('node-date').value,
         x: Math.abs(panX) + 300,
         y: Math.abs(panY) + 250,
-        parents: selectedParents
+        parents: selectedPoints = selectedParents
       });
     }
 
@@ -703,6 +733,7 @@ function setupEventListeners() {
 
   document.getElementById('ctx-delete').addEventListener('click', () => {
     if (contextMenuNodeId) {
+      openConfirm_modal_name = 'Hapus Task ini?';
       openConfirmModal(
         'Hapus Task ini?',
         'Node item ini akan dihapus dari proyek.',
