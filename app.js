@@ -482,7 +482,7 @@ function updateConnectionsOnly() {
 }
 
 /* -------------------------------------------------------------
-   FITUR EXPORT PDF
+   FITUR EXPORT PDF (HITAM PUTIH & TANPA BACKGROUND)
 ------------------------------------------------------------- */
 function openPdfModal() {
   if (!currentProjectId) {
@@ -502,20 +502,51 @@ function closePdfModal() {
 
 function exportRoadmapToPDF() {
   closePdfModal();
-  showLoading("Membuat dokumen PDF...");
+  showLoading("Menyiapkan dokumen PDF hitam-putih...");
 
   const paperSize = document.getElementById('pdf-paper-size').value;
   const orientation = document.getElementById('pdf-orientation').value;
 
   const canvas = document.getElementById('map-canvas');
 
-  // Simpan posisi transform asli canvas
   const originalTransform = canvas.style.transform;
+  const originalBg = canvas.style.backgroundColor;
+  const originalBackgroundImage = canvas.style.backgroundImage;
 
-  // Reset sementara zoom & pan agar rendering PDF utuh
   canvas.style.transform = 'translate(0px, 0px) scale(1)';
+  canvas.style.backgroundColor = '#ffffff';
+  canvas.style.backgroundImage = 'none';
 
-  // Hitung batas bounding box node agar tidak ada area kosong berlebih
+  const nodesElements = canvas.querySelectorAll('.craft-node');
+  const originalNodeStyles = [];
+  nodesElements.forEach(el => {
+    originalNodeStyles.push({
+      el: el,
+      bg: el.style.backgroundColor,
+      border: el.style.borderColor,
+      color: el.style.color
+    });
+    el.style.backgroundColor = '#ffffff';
+    el.style.borderColor = '#1e293b';
+    el.style.color = '#0f172a';
+    el.style.boxShadow = 'none';
+
+    el.querySelectorAll('.text-slate-100, .text-slate-400, .text-amber-400, .text-emerald-400').forEach(txt => {
+      txt.style.color = '#1e293b';
+    });
+  });
+
+  const svgPaths = canvas.querySelectorAll('svg path');
+  const originalStrokeAttrs = [];
+  svgPaths.forEach(path => {
+    originalStrokeAttrs.push({
+      path: path,
+      stroke: path.getAttribute('stroke'),
+      dash: path.getAttribute('stroke-dasharray')
+    });
+    path.setAttribute('stroke', '#334155');
+  });
+
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   currentNodes.forEach(n => {
     if (n.x < minX) minX = n.x;
@@ -532,17 +563,16 @@ function exportRoadmapToPDF() {
   const exportWidth = (maxX - minX) + 350 + (padding * 2);
   const exportHeight = (maxY - minY) + 200 + (padding * 2);
 
-  // Geser canvas ke offset 0,0 sementara
   canvas.style.transform = `translate(${-minX + padding}px, ${-minY + padding}px) scale(1)`;
 
   const opt = {
     margin:       10,
-    filename:     `Roadmap_${currentProjectName.replace(/\s+/g, '_')}.pdf`,
+    filename:     `Roadmap_${currentProjectName.replace(/\s+/g, '_')}_BW.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { 
       scale: 2, 
       useCORS: true, 
-      backgroundColor: '#020617',
+      backgroundColor: '#ffffff',
       width: exportWidth,
       height: exportHeight
     },
@@ -550,12 +580,31 @@ function exportRoadmapToPDF() {
   };
 
   html2pdf().set(opt).from(canvas).save().then(() => {
-    // Kembalikan posisi canvas seperti semula
     canvas.style.transform = originalTransform;
+    canvas.style.backgroundColor = originalBg;
+    canvas.style.backgroundImage = originalBackgroundImage;
+
+    nodesElements.forEach((el, index) => {
+      const orig = originalNodeStyles[index];
+      el.style.backgroundColor = orig.bg;
+      el.style.borderColor = orig.border;
+      el.style.color = orig.color;
+      el.style.boxShadow = '';
+      el.querySelectorAll('*').forEach(txt => txt.style.color = '');
+    });
+
+    svgPaths.forEach((path, index) => {
+      const orig = originalStrokeAttrs[index];
+      path.setAttribute('stroke', orig.stroke);
+      if (orig.dash) path.setAttribute('stroke-dasharray', orig.dash);
+    });
+
     hideLoading();
   }).catch(err => {
     console.error("Gagal cetak PDF:", err);
     canvas.style.transform = originalTransform;
+    canvas.style.backgroundColor = originalBg;
+    canvas.style.backgroundImage = originalBackgroundImage;
     hideLoading();
     openAlertModal("Gagal", "Terjadi kesalahan saat mengekspor PDF.", "error");
   });
