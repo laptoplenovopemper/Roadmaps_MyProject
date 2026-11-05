@@ -482,6 +482,86 @@ function updateConnectionsOnly() {
 }
 
 /* -------------------------------------------------------------
+   FITUR EXPORT PDF
+------------------------------------------------------------- */
+function openPdfModal() {
+  if (!currentProjectId) {
+    openAlertModal("Perhatian", "Pilih proyek terlebih dahulu sebelum mencetak PDF.");
+    return;
+  }
+  const modal = document.getElementById('pdf-modal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closePdfModal() {
+  const modal = document.getElementById('pdf-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+function exportRoadmapToPDF() {
+  closePdfModal();
+  showLoading("Membuat dokumen PDF...");
+
+  const paperSize = document.getElementById('pdf-paper-size').value;
+  const orientation = document.getElementById('pdf-orientation').value;
+
+  const canvas = document.getElementById('map-canvas');
+
+  // Simpan posisi transform asli canvas
+  const originalTransform = canvas.style.transform;
+
+  // Reset sementara zoom & pan agar rendering PDF utuh
+  canvas.style.transform = 'translate(0px, 0px) scale(1)';
+
+  // Hitung batas bounding box node agar tidak ada area kosong berlebih
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  currentNodes.forEach(n => {
+    if (n.x < minX) minX = n.x;
+    if (n.y < minY) minY = n.y;
+    if (n.x > maxX) maxX = n.x;
+    if (n.y > maxY) maxY = n.y;
+  });
+
+  if (currentNodes.length === 0) {
+    minX = 0; minY = 0; maxX = 800; maxY = 600;
+  }
+
+  const padding = 60;
+  const exportWidth = (maxX - minX) + 350 + (padding * 2);
+  const exportHeight = (maxY - minY) + 200 + (padding * 2);
+
+  // Geser canvas ke offset 0,0 sementara
+  canvas.style.transform = `translate(${-minX + padding}px, ${-minY + padding}px) scale(1)`;
+
+  const opt = {
+    margin:       10,
+    filename:     `Roadmap_${currentProjectName.replace(/\s+/g, '_')}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { 
+      scale: 2, 
+      useCORS: true, 
+      backgroundColor: '#020617',
+      width: exportWidth,
+      height: exportHeight
+    },
+    jsPDF:        { unit: 'mm', format: paperSize, orientation: orientation }
+  };
+
+  html2pdf().set(opt).from(canvas).save().then(() => {
+    // Kembalikan posisi canvas seperti semula
+    canvas.style.transform = originalTransform;
+    hideLoading();
+  }).catch(err => {
+    console.error("Gagal cetak PDF:", err);
+    canvas.style.transform = originalTransform;
+    hideLoading();
+    openAlertModal("Gagal", "Terjadi kesalahan saat mengekspor PDF.", "error");
+  });
+}
+
+/* -------------------------------------------------------------
    MODAL HANDLERS
 ------------------------------------------------------------- */
 function openNodeModal(id = null) {
@@ -657,6 +737,12 @@ function setupEventListeners() {
     }
     closeProjectModal();
   });
+
+  // Listener Modal Cetak PDF
+  document.getElementById('btn-open-pdf-modal').addEventListener('click', openPdfModal);
+  document.getElementById('btn-close-pdf-modal').addEventListener('click', closePdfModal);
+  document.getElementById('btn-cancel-pdf-modal').addEventListener('click', closePdfModal);
+  document.getElementById('btn-export-pdf-action').addEventListener('click', exportRoadmapToPDF);
 
   document.getElementById('btn-add-node').addEventListener('click', () => openNodeModal());
   document.getElementById('btn-close-modal').addEventListener('click', closeNodeModal);
