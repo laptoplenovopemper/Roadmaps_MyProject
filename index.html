@@ -7,6 +7,8 @@
   <!-- CDN Tailwind CSS & FontAwesome Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- CDN html2pdf.js untuk export PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- External CSS -->
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -36,7 +38,7 @@
     </div>
 
     <!-- Progress & Action Buttons -->
-    <div class="flex items-center gap-6">
+    <div class="flex items-center gap-4">
       <div class="flex items-center gap-3 bg-slate-950 px-4 py-1.5 rounded-lg border border-slate-800">
         <div class="text-xs text-slate-400">Progress:</div>
         <div class="w-32 bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -48,9 +50,15 @@
       </div>
 
       <div class="flex gap-2">
+        <!-- Tombol Cetak PDF Tambahan -->
+        <button id="btn-open-pdf-modal" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-pdf"></i> Cetak PDF
+        </button>
+        
         <button id="btn-add-node" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
           <i class="fa-solid fa-plus"></i> Tambah Node
         </button>
+
         <button id="btn-save-db" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition">
           <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Sheets
         </button>
@@ -90,6 +98,47 @@
     <button id="ctx-delete" class="w-full text-left px-3 py-2 text-red-400 hover:bg-slate-800 hover:text-red-300 flex items-center gap-2 border-t border-slate-800">
       <i class="fa-solid fa-trash"></i> Delete Node
     </button>
+  </div>
+
+  <!-- Modal: Cetak / Export PDF -->
+  <div id="pdf-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-xl p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+        <h3 class="font-bold text-indigo-400 flex items-center gap-2">
+          <i class="fa-solid fa-file-pdf"></i> Cetak PDF Roadmap
+        </h3>
+        <button id="btn-close-pdf-modal" class="text-slate-500 hover:text-slate-300">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Ukuran Kertas</label>
+          <select id="pdf-paper-size" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+            <option value="a4" selected>A4 (210 x 297 mm) - Default</option>
+            <option value="a3">A3 (297 x 420 mm)</option>
+            <option value="letter">Letter (8.5 x 11 inc)</option>
+            <option value="legal">Legal (8.5 x 14 inc)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Orientasi</label>
+          <select id="pdf-orientation" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+            <option value="landscape" selected>Landscape (Mendatar)</option>
+            <option value="portrait">Portrait (Tegak)</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" id="btn-cancel-pdf-modal" class="px-3 py-1.5 rounded-lg text-slate-400 hover:bg-slate-800 text-xs font-semibold">Batal</button>
+          <button type="button" id="btn-export-pdf-action" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-download"></i> Unduh PDF
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Modal 1: Edit / Tambah Node -->
