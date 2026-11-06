@@ -297,7 +297,7 @@ function createNodeElement(node) {
   
   div.innerHTML = `
     <div class="flex items-start justify-between gap-3 mb-2 pointer-events-none">
-      <span class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shrink-0">
+      <span class="node-icon-box w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 shrink-0">
         <i class="fa-solid ${node.icon}"></i>
       </span>
       <div class="flex flex-col items-end shrink-0">
@@ -327,12 +327,12 @@ function getStatusBorderClass(status) {
 
 function getStatusBadgeHTML(status) {
   if (status === 'completed') {
-    return `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded">DONE</span>`;
+    return `<span class="node-badge px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded">DONE</span>`;
   }
   if (status === 'in-progress') {
-    return `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded">PROSES</span>`;
+    return `<span class="node-badge px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded">PROSES</span>`;
   }
-  return `<span class="px-1.5 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 rounded">LOCKED</span>`;
+  return `<span class="node-badge px-1.5 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 rounded">LOCKED</span>`;
 }
 
 /* -------------------------------------------------------------
@@ -482,7 +482,7 @@ function updateConnectionsOnly() {
 }
 
 /* -------------------------------------------------------------
-   FITUR EXPORT PDF (HITAM PUTIH & TANPA BACKGROUND)
+   FITUR EXPORT PDF (HITAM PUTIH TANPA BACKGROUND GELAP & BADGE BERSIH)
 ------------------------------------------------------------- */
 function openPdfModal() {
   if (!currentProjectId) {
@@ -519,6 +519,7 @@ function exportRoadmapToPDF() {
 
   const nodesElements = canvas.querySelectorAll('.craft-node');
   const originalNodeStyles = [];
+  
   nodesElements.forEach(el => {
     originalNodeStyles.push({
       el: el,
@@ -526,16 +527,35 @@ function exportRoadmapToPDF() {
       border: el.style.borderColor,
       color: el.style.color
     });
+    
+    // Ubah kotak node utama menjadi putih bersih dengan border hitam tegas
     el.style.backgroundColor = '#ffffff';
     el.style.borderColor = '#1e293b';
     el.style.color = '#0f172a';
     el.style.boxShadow = 'none';
 
+    // Bersihkan background pada badge status agar teksnya hitam jelas tanpa background gelap
+    el.querySelectorAll('.node-badge').forEach(badge => {
+      badge.style.backgroundColor = 'transparent';
+      badge.style.borderColor = '#1e293b';
+      badge.style.color = '#1e293b';
+      badge.style.fontWeight = 'bold';
+    });
+
+    // Bersihkan background pada kotak icon di pojok kiri atas node
+    el.querySelectorAll('.node-icon-box').forEach(iconBox => {
+      iconBox.style.backgroundColor = 'transparent';
+      iconBox.style.borderColor = '#1e293b';
+      iconBox.style.color = '#1e293b';
+    });
+
+    // Sesuaikan warna teks judul, deskripsi, dan tanggal agar hitam pekat terbaca jelas
     el.querySelectorAll('.text-slate-100, .text-slate-400, .text-amber-400, .text-emerald-400').forEach(txt => {
       txt.style.color = '#1e293b';
     });
   });
 
+  // Sesuaikan warna garis penghubung SVG menjadi abu-abu/hitam pekat
   const svgPaths = canvas.querySelectorAll('svg path');
   const originalStrokeAttrs = [];
   svgPaths.forEach(path => {
@@ -580,6 +600,7 @@ function exportRoadmapToPDF() {
   };
 
   html2pdf().set(opt).from(canvas).save().then(() => {
+    // Kembalikan tampilan aplikasi ke mode gelap semula setelah cetak selesai
     canvas.style.transform = originalTransform;
     canvas.style.backgroundColor = originalBg;
     canvas.style.backgroundImage = originalBackgroundImage;
@@ -590,6 +611,14 @@ function exportRoadmapToPDF() {
       el.style.borderColor = orig.border;
       el.style.color = orig.color;
       el.style.boxShadow = '';
+      
+      el.querySelectorAll('.node-badge, .node-icon-box').forEach(b => {
+        b.style.backgroundColor = '';
+        b.style.borderColor = '';
+        b.style.color = '';
+        b.style.fontWeight = '';
+      });
+
       el.querySelectorAll('*').forEach(txt => txt.style.color = '');
     });
 
