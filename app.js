@@ -482,7 +482,7 @@ function updateConnectionsOnly() {
 }
 
 /* -------------------------------------------------------------
-   FITUR EXPORT PDF (HITAM PUTIH TANPA BACKGROUND GELAP & BADGE BERSIH)
+   FITUR EXPORT PDF (HITAM PUTIH, MARGIN 5MM, TANPA BG GELAP)
 ------------------------------------------------------------- */
 function openPdfModal() {
   if (!currentProjectId) {
@@ -528,13 +528,11 @@ function exportRoadmapToPDF() {
       color: el.style.color
     });
     
-    // Ubah kotak node utama menjadi putih bersih dengan border hitam tegas
     el.style.backgroundColor = '#ffffff';
     el.style.borderColor = '#1e293b';
     el.style.color = '#0f172a';
     el.style.boxShadow = 'none';
 
-    // Bersihkan background pada badge status agar teksnya hitam jelas tanpa background gelap
     el.querySelectorAll('.node-badge').forEach(badge => {
       badge.style.backgroundColor = 'transparent';
       badge.style.borderColor = '#1e293b';
@@ -542,20 +540,17 @@ function exportRoadmapToPDF() {
       badge.style.fontWeight = 'bold';
     });
 
-    // Bersihkan background pada kotak icon di pojok kiri atas node
     el.querySelectorAll('.node-icon-box').forEach(iconBox => {
       iconBox.style.backgroundColor = 'transparent';
       iconBox.style.borderColor = '#1e293b';
       iconBox.style.color = '#1e293b';
     });
 
-    // Sesuaikan warna teks judul, deskripsi, dan tanggal agar hitam pekat terbaca jelas
     el.querySelectorAll('.text-slate-100, .text-slate-400, .text-amber-400, .text-emerald-400').forEach(txt => {
       txt.style.color = '#1e293b';
     });
   });
 
-  // Sesuaikan warna garis penghubung SVG menjadi abu-abu/hitam pekat
   const svgPaths = canvas.querySelectorAll('svg path');
   const originalStrokeAttrs = [];
   svgPaths.forEach(path => {
@@ -579,14 +574,14 @@ function exportRoadmapToPDF() {
     minX = 0; minY = 0; maxX = 800; maxY = 600;
   }
 
-  const padding = 60;
-  const exportWidth = (maxX - minX) + 350 + (padding * 2);
-  const exportHeight = (maxY - minY) + 200 + (padding * 2);
+  const padding = 80;
+  const exportWidth = (maxX - minX) + 400 + (padding * 2);
+  const exportHeight = (maxY - minY) + 300 + (padding * 2);
 
   canvas.style.transform = `translate(${-minX + padding}px, ${-minY + padding}px) scale(1)`;
 
   const opt = {
-    margin:       10,
+    margin:       5, // Margin tipis 5mm
     filename:     `Roadmap_${currentProjectName.replace(/\s+/g, '_')}_BW.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { 
@@ -600,7 +595,6 @@ function exportRoadmapToPDF() {
   };
 
   html2pdf().set(opt).from(canvas).save().then(() => {
-    // Kembalikan tampilan aplikasi ke mode gelap semula setelah cetak selesai
     canvas.style.transform = originalTransform;
     canvas.style.backgroundColor = originalBg;
     canvas.style.backgroundImage = originalBackgroundImage;
