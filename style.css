@@ -45,6 +45,11 @@ svg#connections-layer {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
 
+/* Agar tombol Enter pada teks keterangan node merespons baris baru */
+.node-desc {
+  white-space: pre-line;
+}
+
 /* Styling Dropdown Project */
 #project-selector {
   color: #f8fafc;
