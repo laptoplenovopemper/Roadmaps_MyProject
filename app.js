@@ -306,7 +306,7 @@ function createNodeElement(node) {
       </div>
     </div>
     <h4 class="font-bold text-sm text-slate-100 mb-1 pointer-events-none whitespace-normal">${node.title}</h4>
-    <p class="text-xs text-slate-400 pointer-events-none whitespace-normal">${node.desc || 'Tidak ada keterangan'}</p>
+    <p class="node-desc text-xs text-slate-400 pointer-events-none">${node.desc || 'Tidak ada keterangan'}</p>
   `;
 
   div.addEventListener('contextmenu', (e) => {
